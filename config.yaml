@@ -1,0 +1,21 @@
+n_samples: 100
+max_tokens: 600
+top_p: 0.95
+
+models:
+  nano:
+    id: gpt-4o-mini
+    provider: openai
+    temperature: 1.2
+
+  haiku:
+    id: claude-3-haiku-20240307
+    provider: anthropic
+    temperature: 0.9
+    system_prompt: |
+      You are a careful juror. Return exactly five numbers…
+
+  deepseek:
+    id: deepseek-chat
+    provider: deepseek
+    temperature: 0.9 
