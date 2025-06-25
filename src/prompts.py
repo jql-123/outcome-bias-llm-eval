@@ -120,7 +120,7 @@ def get_system_6(frame: str) -> str:
     frame = frame.lower()
     if frame in {"juror", "legal", "careful_juror"}:
         return SYSTEM_6NUM_JUROR
-    elif frame in {"participant", "xphi"}:
+    elif frame in {"participant", "xphi", "experiment"}:
         return SYSTEM_6NUM_PARTICIPANT
     else:
         raise ValueError(f"Unknown frame '{frame}'. Choose 'juror' or 'participant'.") 

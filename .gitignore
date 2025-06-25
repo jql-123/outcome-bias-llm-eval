@@ -10,3 +10,6 @@ venv/
 
 # Ignore log files
 *.log
+
+# Ignore conversation logs
+results/conversations/*.json

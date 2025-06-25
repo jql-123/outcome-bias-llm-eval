@@ -5,12 +5,26 @@ import json
 import uuid
 from pathlib import Path
 import datetime
+import sys
+
+# ---------------------------------------------------------------------------
+# Flexible imports so the script can be executed with `python src/run_experiment.py`
+# or via `python -m src.run_experiment`.
+# ---------------------------------------------------------------------------
+
+try:
+    # When run as a module (python -m src.run_experiment)
+    from . import model_api, parser, prompts  # type: ignore
+except ImportError:  # pragma: no cover – fallback for direct script execution
+    ROOT_DIR = Path(__file__).resolve().parents[1]
+    sys.path.insert(0, str(ROOT_DIR))
+    from src import model_api, parser, prompts  # type: ignore
+
+import random
 
 import pandas as pd
 import yaml
 from tqdm import tqdm
-
-from . import model_api, parser, prompts
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data"
@@ -102,7 +116,8 @@ def main():
     parser_cli.add_argument("--study", type=int, choices=[2, 3], required=True)
     parser_cli.add_argument("--models", nargs="+", required=True, help="Model aliases as in config.yaml section 'models'.")
     parser_cli.add_argument("--n", type=int, default=None, help="Number of completions per condition (overrides config).")
-    parser_cli.add_argument("--frame", type=str, default="juror", choices=["juror", "participant"], help="System prompt framing for Step B (juror or participant).")
+    parser_cli.add_argument("--total", type=int, default=None, help="Total completions per model (across all conditions). Overrides --n if provided.")
+    parser_cli.add_argument("--frame", type=str, default="juror", choices=["juror", "experiment"], help="System prompt framing for Step B (juror or experiment).")
 
     args = parser_cli.parse_args()
 
@@ -128,70 +143,98 @@ def main():
 
     run_id = uuid.uuid4().hex[:8]
 
-    n_samples = args.n if args.n is not None else cfg.get("n_samples", 100)
+    # Determine how many completions to generate
+    total_n = args.total  # may be None
+    per_cond_n_raw = args.n if args.n is not None else cfg.get("n_samples", 100)
+    per_cond_n: int = int(per_cond_n_raw if per_cond_n_raw is not None else 100)
 
     for model in models:
-        for cond in tqdm(conditions, desc=f"{model}"):
+        if total_n is not None:
+            # Build randomized condition sequence with roughly even distribution
+            base = total_n // len(conditions)
+            remainder = total_n % len(conditions)
+            cond_sequence: list[str] = []
+            for c in conditions:
+                cond_sequence.extend([c] * base)
+            # distribute remainder
+            if remainder:
+                cond_sequence.extend(random.sample(conditions, remainder))
+            random.shuffle(cond_sequence)
+        else:
+            cond_sequence = []
+            for c in conditions:
+                cond_sequence.extend([c] * per_cond_n)
+
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        def process_condition(cond):
             full_text = vignettes[cond]
             intro_text = split_intro(full_text)
 
-            for _ in range(n_samples):
-                # Step A: anchor
-                anchor_prompt = prompts.build_anchor_prompt(cond, intro_text)
-                msgs_a = [
-                    {"role": "system", "content": prompts.SYSTEM_2NUM},
-                    {"role": "user", "content": anchor_prompt},
-                ]
+            # Step A: anchor
+            anchor_prompt = prompts.build_anchor_prompt(cond, intro_text)
+            msgs_a = [
+                {"role": "system", "content": prompts.SYSTEM_2NUM},
+                {"role": "user", "content": anchor_prompt},
+            ]
+            try:
                 anchor_resp = model_api.generate(model, msgs_a, n=1)[0]
-                try:
-                    P_anchor, GR_anchor = parser.parse_two(anchor_resp)
-                except Exception:
-                    continue  # skip if malformed
+                P_anchor, GR_anchor = parser.parse_two(anchor_resp)
+            except Exception:
+                return None  # skip if malformed
 
-                # For anchor step
-                log_conversation(model, cond, "anchor", msgs_a, anchor_resp, run_id)
+            # For anchor step
+            log_conversation(model, cond, "anchor", msgs_a, anchor_resp, run_id)
 
-                # Step B: post-outcome
-                post_prompt = prompts.build_post_prompt(
-                    cond, full_text, P_anchor, GR_anchor
-                )
-                system_6 = prompts.get_system_6(frame)
-                msgs_b = [
-                    {"role": "system", "content": system_6},
-                    {"role": "user", "content": post_prompt},
-                ]
+            # Step B: post-outcome
+            post_prompt = prompts.build_post_prompt(
+                cond, full_text, P_anchor, GR_anchor
+            )
+            system_6 = prompts.get_system_6(frame)
+            msgs_b = [
+                {"role": "system", "content": system_6},
+                {"role": "user", "content": post_prompt},
+            ]
+            try:
                 dv_resp = model_api.generate(model, msgs_b, n=1)[0]
-                try:
-                    (
-                        P_post,
-                        GR_post,
-                        reckless,
-                        negligent,
-                        blame,
-                        punish,
-                    ) = parser.parse_six(dv_resp)
-                except Exception:
-                    continue
+                (
+                    P_post,
+                    GR_post,
+                    reckless,
+                    negligent,
+                    blame,
+                    punish,
+                ) = parser.parse_six(dv_resp)
+            except Exception:
+                return None
 
-                # For post-outcome step
-                log_conversation(model, cond, "post", msgs_b, dv_resp, run_id)
+            # For post-outcome step
+            log_conversation(model, cond, "post", msgs_b, dv_resp, run_id)
 
-                row = {
-                    "run_id": run_id,
-                    "model": model,
-                    "study": study,
-                    "condition": cond,
-                    "frame": frame,
-                    "P_anchor": P_anchor,
-                    "GR_anchor": GR_anchor,
-                    "P_post": P_post,
-                    "GR_post": GR_post,
-                    "Reckless": reckless,
-                    "Negligent": negligent,
-                    "Blame": blame,
-                    "Punish": punish,
-                }
-                save_row(row)
+            row = {
+                "run_id": run_id,
+                "model": model,
+                "study": study,
+                "condition": cond,
+                "frame": frame,
+                "P_anchor": P_anchor,
+                "GR_anchor": GR_anchor,
+                "P_post": P_post,
+                "GR_post": GR_post,
+                "Reckless": reckless,
+                "Negligent": negligent,
+                "Blame": blame,
+                "Punish": punish,
+            }
+            return row
+
+        # Use ThreadPoolExecutor to parallelize over conditions
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            future_to_cond = {executor.submit(process_condition, cond): cond for cond in cond_sequence}
+            for future in tqdm(as_completed(future_to_cond), total=len(future_to_cond), desc=f"{model}"):
+                row = future.result()
+                if row is not None:
+                    save_row(row)
 
 
 if __name__ == "__main__":
