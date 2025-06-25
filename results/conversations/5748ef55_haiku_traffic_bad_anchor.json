@@ -1,0 +1,17 @@
+{
+  "model": "haiku",
+  "condition": "traffic_bad",
+  "step": "anchor",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a careful juror. Return exactly TWO numbers (comma-separated) for:\n1) objective_probability 0-100  • 2) good_reasons 0-100.\nNo words, no explanations."
+    },
+    {
+      "role": "user",
+      "content": "John is a mechanic who lives in a deserted area in the central USA. John just repaired the wheels of his wife’s car. In order to make sure that the car is now safe, John decides to test it at full speed on a deserted road he takes every day to work. Since John has not seen another car on this road for the past years, he does not slow down at the four-way stop on the road.\n\nQuestions:\n1. On a scale from 0 (completely unlikely) to 100 (certain), how likely is it,\n   from an objective point of view, that a brake failure will occur that day?\n2. To what extent do you agree (0 = completely disagree; 100 = completely agree):\n   \"Mr. Adams has good reasons to believe that a brake failure will not occur that day.\"\n"
+    }
+  ],
+  "response": "60, 30",
+  "timestamp": "2025-06-25T17:11:13.554026"
+}

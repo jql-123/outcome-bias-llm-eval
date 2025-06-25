@@ -1,0 +1,17 @@
+{
+  "model": "deepseek",
+  "condition": "flood_good",
+  "step": "anchor",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a careful juror. Return exactly TWO numbers (comma-separated) for:\n1) objective_probability 0-100  • 2) good_reasons 0-100.\nNo words, no explanations."
+    },
+    {
+      "role": "user",
+      "content": "Ms. Russel is the owner of a big strawberry farm. The homes of the strawberry pickers are situated close to a river that runs through the farm grounds. Two years ago, there was an unexpected flood, which inundated the lodgings of the fruit pickers overnight. Some lost their belongings and a few were injured. The next two years, Ms. Russel took precautions during the rainy season so as to protect the workers’ lodgings against flooding. In those last two years, however, there was no flooding. Ms. Russel believes that there will be no flood this year. She hence decides not to install the temporary flood barriers this year, and uses a portion of the money budgeted for the flood barriers to refurbish the kitchens in the workers’ houses instead. .\n\nQuestions:\n1. On a scale from 0 (completely unlikely) to 100 (certain), how likely is it,\n   from an objective point of view, that a flood will occur this year?\n2. To what extent do you agree (0 = completely disagree; 100 = completely agree):\n   \"Ms. Russel has good reasons to believe that a flood will not occur this year.\"\n"
+    }
+  ],
+  "response": "50, 30",
+  "timestamp": "2025-06-25T17:11:20.530848"
+}
