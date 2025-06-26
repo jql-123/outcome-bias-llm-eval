@@ -40,6 +40,6 @@ def main(frame: str = "juror", study: int = 6) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Plot expert-probability experiment results.")
     parser.add_argument("--frame", type=str, default="juror", help="Frame filter (juror or experiment)")
-    parser.add_argument("--study", type=int, default=6, help="Study number (5 or 6)")
+    parser.add_argument("--study", type=int, default=6, help="Study number (1, 3, 5 or 6)")
     args = parser.parse_args()
     main(frame=args.frame, study=args.study) 

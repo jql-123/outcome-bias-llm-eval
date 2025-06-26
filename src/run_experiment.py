@@ -188,8 +188,17 @@ def main():
         def process_condition(cond):
             # ---------------- Study 5 (single-step expert) -----------------
             if study == 5:
-                # Expert probability – single-step prompt
-                text = vignettes[cond]
+                # Expert probability – single-step prompt (intro + expert line + outcome)
+                if cond in vignettes:
+                    text = vignettes[cond]
+                else:
+                    scen_key = cond.split("_expert_")[0]
+                    seg = parts.get(scen_key, {})
+                    intro_text = seg.get("intro", "")
+                    expert_line = seg.get("expert_phrase", "")
+                    outcome_text = seg.get("bad_outcome" if cond.endswith("bad") else "good_outcome", "")
+                    text = f"{intro_text}\n\n{expert_line}\n\n{outcome_text}"
+
                 prompt = prompts.build_expert_prompt(cond, text)
                 system_6 = prompts.get_system_6(frame)
                 msgs = [
