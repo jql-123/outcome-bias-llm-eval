@@ -15,9 +15,8 @@ from pathlib import Path
 
 import matplotlib
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
+from plot_utils import plot_by_model_generic
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -74,58 +73,8 @@ def derive_outcome(condition: str) -> str:
 
 def main(frame: str = "juror") -> None:
     df = load_data()
-
-    # Filter by framing
-    df = df[df["frame"] == frame]
-
-    n_rows = len(df)
-
-    # Outcome column & scaling
-    df = df.copy()
-    # Convert probability scales 0-100 -> 1-7 for plotting
-    for col in ("P_post", "GR_post"):
-        if col in df.columns:
-            df[col] = (df[col] / 100.0) * 6 + 1
-
-    df["outcome"] = df["condition"].apply(derive_outcome)  # type: ignore[call-arg]
-
-    # Long form
-    df_long = df.melt(
-        id_vars=["model", "outcome"],
-        value_vars=DV_COLS,
-        var_name="DV",
-        value_name="score",
-    )
-    df_long["DV"] = df_long["DV"].map(DV_LABELS)  # type: ignore[arg-type]
-
-    # Plot
-    sns.set_theme(style="whitegrid")
-    g = sns.catplot(
-        data=df_long,
-        kind="bar",
-        x="DV",
-        y="score",
-        hue="outcome",
-        col="model",
-        order=ORDER,
-        errorbar="se",
-        height=4,
-        aspect=1.2,
-        palette="pastel",
-    )
-
-    g.set_axis_labels("", "Mean")
-    g.set_titles("{col_name}")
-
-    # Add overall title with frame and sample size
-    g.fig.suptitle(f"{frame.capitalize()} framing (n={n_rows})", y=1.05, fontsize=14)
-    g.set_xticklabels(rotation=45)
-    plt.tight_layout()
-
-    FIG_DIR.mkdir(parents=True, exist_ok=True)
-    out_path = FIG_DIR / f"all_dvs_by_model_{frame}.png"
-    g.savefig(out_path, dpi=300, bbox_inches="tight")
-    print(f"Figure saved to {out_path.relative_to(ROOT)}")
+    out_fname = f"all_dvs_exp3_{frame}.png"
+    plot_by_model_generic(df, study=3, frame=frame, out_filename=out_fname)
 
 
 if __name__ == "__main__":

@@ -3,9 +3,11 @@ openai>=1.13
 anthropic>=0.18
 huggingface_hub>=0.20
 pandas
-scipy
+scipy>=1.11
 matplotlib
 tqdm
 python-dotenv
 seaborn
-requests 
+requests
+statsmodels>=0.14
+adjustText 

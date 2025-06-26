@@ -90,7 +90,7 @@ def _fill_placeholders(key: str):
             TIME_MARKER="this year",
             THIS_YEAR="this year",
         )
-    else:  # traffic scenario (mechanic John)
+    elif key.startswith("traffic"):
         return dict(
             AGENT="John",
             HARM="another car on the road",
@@ -98,6 +98,72 @@ def _fill_placeholders(key: str):
             TIME_MARKER="that day",
             THIS_YEAR="that day",
         )
+    elif key.startswith("warehouse_fire"):
+        return dict(
+            AGENT="Mr. Thompson",
+            HARM="a fire",
+            PREVENTION="sprinkler test",
+            TIME_MARKER="that month",
+            THIS_YEAR="that month",
+        )
+    elif key.startswith("ski_resort_avalanche"):
+        return dict(
+            AGENT="Maria Santos",
+            HARM="an avalanche",
+            PREVENTION="controlled blast",
+            TIME_MARKER="that day",
+            THIS_YEAR="that day",
+        )
+    elif key.startswith("hospital_backup_generator"):
+        return dict(
+            AGENT="Dr. Peterson",
+            HARM="a power outage",
+            PREVENTION="generator maintenance",
+            TIME_MARKER="that quarter",
+            THIS_YEAR="that quarter",
+        )
+    elif key.startswith("datacenter_cooling"):
+        return dict(
+            AGENT="Jake Mitchell",
+            HARM="a cooling failure",
+            PREVENTION="backup cooling system",
+            TIME_MARKER="that winter",
+            THIS_YEAR="that winter",
+        )
+    elif key.startswith("swimming_pool_drain"):
+        return dict(
+            AGENT="Patricia Davis",
+            HARM="a drain incident",
+            PREVENTION="drain inspection",
+            TIME_MARKER="that month",
+            THIS_YEAR="that month",
+        )
+    elif key.startswith("chemical_valve_leak"):
+        return dict(
+            AGENT="Lisa Rodriguez",
+            HARM="a chemical leak",
+            PREVENTION="gasket replacement",
+            TIME_MARKER="that month",
+            THIS_YEAR="that month",
+        )
+    elif key.startswith("drone_delivery_battery"):
+        return dict(
+            AGENT="Marcus Williams",
+            HARM="a battery failure",
+            PREVENTION="cold-weather batteries",
+            TIME_MARKER="that winter",
+            THIS_YEAR="that winter",
+        )
+    elif key.startswith("movie_set_rigging"):
+        return dict(
+            AGENT="Tom Bradley",
+            HARM="a cable failure",
+            PREVENTION="secondary safety cables",
+            TIME_MARKER="that stunt",
+            THIS_YEAR="that stunt",
+        )
+    else:
+        raise ValueError(f"Unknown scenario key: {key}")
 
 
 def build_anchor_prompt(key: str, intro_text: str) -> str:

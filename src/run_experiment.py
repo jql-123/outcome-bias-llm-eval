@@ -31,11 +31,7 @@ DATA_DIR = ROOT / "data"
 RESULTS_RAW = ROOT / "results" / "raw_calls"
 RESULTS_CLEAN = ROOT / "results" / "clean"
 
-EXPERT_COND = {
-    "flood_expert_good": "neutral",
-    "flood_expert_bad": "bad",
-    # traffic expert conditions disabled for now
-}
+# Outcome helper will decide neutral/bad on the fly
 
 
 def load_config():
@@ -110,7 +106,11 @@ def save_row(row: dict):
     df.to_csv(out_path, mode="a", index=False, header=header)
 
 
+LOG_ENABLED = True
+
 def log_conversation(model, condition, step, messages, response, run_id, exp_label):
+    if not LOG_ENABLED:
+        return
     log_dir = ROOT / "results" / "conversations"
     log_dir.mkdir(parents=True, exist_ok=True)
     fname = log_dir / f"{run_id}_{model}_{condition}_{step}_{exp_label}.json"
@@ -132,6 +132,7 @@ def main():
     parser_cli.add_argument("--n", type=int, default=None, help="Number of completions per condition (overrides config).")
     parser_cli.add_argument("--total", type=int, default=None, help="Total completions per model (across all conditions). Overrides --n if provided.")
     parser_cli.add_argument("--frame", type=str, default="juror", choices=["juror", "experiment"], help="System prompt framing for Step B (juror or experiment).")
+    parser_cli.add_argument("--no-log", action="store_true", help="Disable saving conversation JSON logs.")
 
     args = parser_cli.parse_args()
 
@@ -144,19 +145,17 @@ def main():
     frame = args.frame
 
     if study == 5:
-        conditions = list(EXPERT_COND.keys())
+        # Single-step expert probability, one prompt per scenario
+        conditions = [f"{scen}_expert_{suffix}" for scen in parts.keys() for suffix in ("good","bad")]
     elif study == 3:
-        # Only flood scenarios for now; traffic ignored
-        conditions = [
-            "flood_good",
-            "flood_bad",
-        ]
+        # Anchor + outcome block for every scenario (good / bad)
+        conditions = [f"{scen}_{suffix}" for scen in parts.keys() for suffix in ("good","bad")]
     elif study == 2:
         conditions = [
             "flood_within",
         ]
     elif study == 6:  # two-step expert probability
-        conditions = list(EXPERT_COND.keys())
+        conditions = [f"{scen}_expert_{suffix}" for scen in parts.keys() for suffix in ("good","bad")]
     else:
         raise ValueError(f"Unknown study: {study}")
 
@@ -210,7 +209,7 @@ def main():
                 except Exception:
                     return None
 
-                outcome = EXPERT_COND[cond]
+                outcome = "neutral" if cond.endswith("good") else "bad"
 
                 log_conversation(model, cond, "expert", msgs, dv_resp, run_id, f"exp{study}")
 
@@ -232,7 +231,9 @@ def main():
 
             # ---------------- Study 6 (two-step expert) --------------------
             if study == 6:
-                seg = parts.get("flood", {})
+                # Determine scenario key prefix before "_expert_"
+                scen_key = cond.split("_expert_")[0]
+                seg = parts.get(scen_key, {})
                 intro_text = seg.get("intro", "")
                 expert_line = seg.get("expert_phrase", "")
                 outcome_text = seg.get("bad_outcome" if cond.endswith("bad") else "good_outcome", "")
@@ -293,7 +294,16 @@ def main():
                 return row
 
             # ---------------- Studies 2 & 3 -------------------------------
-            full_text = vignettes[cond]
+            if cond in vignettes:
+                full_text = vignettes[cond]
+            else:
+                # build from parts json
+                scen_key, outcome_suffix = cond.rsplit("_", 1)
+                seg = parts.get(scen_key, {})
+                intro_text = seg.get("intro", "")
+                outcome_text = seg.get("bad_outcome" if outcome_suffix == "bad" else "good_outcome", "")
+                full_text = f"{intro_text}\n\n{outcome_text}"
+
             intro_text = split_intro(full_text)
 
             # Step A: anchor

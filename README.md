@@ -89,4 +89,20 @@ The repository already contains the four original Qualtrics DOCX exports under `
 
 ## 5 . Licence
 
-This work is released under the MIT licence. The original experiment material is reproduced here under fair-use for research purposes. 
+This work is released under the MIT licence. The original experiment material is reproduced here under fair-use for research purposes.
+
+## Expert vs Baseline (Flood) Analysis
+
+To reproduce the moderation analysis that contrasts the *no-probability-stabilising* baseline (Study 3) with the *expert-probability* condition (Study 6) for the flood scenario run:
+
+```bash
+# Generate CSV + publication-ready LaTeX table
+python src/stats_expert_vs_baseline.py
+
+# Optional visualisation of |d| reductions
+python src/plot_delta_d.py
+```
+
+The raw numbers are written to `results/tables/exp6_vs_baseline.csv` and the
+figure (if requested) is saved to
+`results/figures/delta_d_exp6.png`. This mirrors the human paper's Experiment-6 comparison. 
