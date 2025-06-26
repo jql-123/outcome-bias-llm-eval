@@ -22,20 +22,15 @@ SETUP_TEXT = {
 }
 
 FORMAT_2NUM = (
-    "Return exactly TWO numbers, comma-separated, in this order:\n"
-    "1) objective_probability 0-100  • 2) good_reasons 0-100.\n"
-    "No words, no explanations."
+    "Respond with a single line of **valid JSON** that has exactly two key–value pairs:\n"
+    "{\n  \"objective_probability\": <0-100>,\n  \"good_reasons\": <0-100>\n}\n"
+    "Do not add any extra keys, text, or commentary."
 )
 
 FORMAT_6NUM = (
-    "Return exactly SIX numbers, comma-separated, in this order:\n"
-    "1) objective_probability (0-100)\n"
-    "2) good_reasons         (0-100)\n"
-    "3) recklessness         (1-7)\n"
-    "4) negligence           (1-7)\n"
-    "5) blameworthiness      (1-7)\n"
-    "6) punishment           (1-7)\n"
-    "Do not add words, labels, or explanations—just the numbers."
+    "Respond with a single line of **valid JSON** that has exactly six key–value pairs:\n"
+    "{\n  \"objective_probability\": <0-100>,\n  \"good_reasons\": <0-100>,\n  \"recklessness\": <1-7>,\n  \"negligence\": <1-7>,\n  \"blameworthiness\": <1-7>,\n  \"punishment\": <1-7>\n}\n"
+    "Do not add any extra keys, text, or commentary."
 )
 
 

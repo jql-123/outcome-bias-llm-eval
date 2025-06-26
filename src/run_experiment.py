@@ -110,10 +110,10 @@ def save_row(row: dict):
     df.to_csv(out_path, mode="a", index=False, header=header)
 
 
-def log_conversation(model, condition, step, messages, response, run_id):
+def log_conversation(model, condition, step, messages, response, run_id, exp_label):
     log_dir = ROOT / "results" / "conversations"
     log_dir.mkdir(parents=True, exist_ok=True)
-    fname = log_dir / f"{run_id}_{model}_{condition}_{step}.json"
+    fname = log_dir / f"{run_id}_{model}_{condition}_{step}_{exp_label}.json"
     with open(fname, "w", encoding="utf-8") as f:
         json.dump({
             "model": model,
@@ -212,7 +212,7 @@ def main():
 
                 outcome = EXPERT_COND[cond]
 
-                log_conversation(model, cond, "expert", msgs, dv_resp, run_id)
+                log_conversation(model, cond, "expert", msgs, dv_resp, run_id, f"exp{study}")
 
                 row = {
                     "run_id": run_id,
@@ -249,7 +249,7 @@ def main():
                 except Exception:
                     return None
 
-                log_conversation(model, cond, "anchor", msgs_a, anchor_resp, run_id)
+                log_conversation(model, cond, "anchor", msgs_a, anchor_resp, run_id, f"exp{study}")
 
                 # Step B – intro + expert + outcome + reminder + 6 Qs
                 body = f"{intro_text}\n\n{expert_line}\n\n{outcome_text}"
@@ -273,7 +273,7 @@ def main():
                 except Exception:
                     return None
 
-                log_conversation(model, cond, "post", msgs_b, dv_resp, run_id)
+                log_conversation(model, cond, "post", msgs_b, dv_resp, run_id, f"exp{study}")
 
                 row = {
                     "run_id": run_id,
@@ -310,7 +310,7 @@ def main():
                 return None  # skip if malformed
 
             # For anchor step
-            log_conversation(model, cond, "anchor", msgs_a, anchor_resp, run_id)
+            log_conversation(model, cond, "anchor", msgs_a, anchor_resp, run_id, f"exp{study}")
 
             # Step B: post-outcome
             post_prompt = prompts.build_post_prompt(
@@ -335,7 +335,7 @@ def main():
                 return None
 
             # For post-outcome step
-            log_conversation(model, cond, "post", msgs_b, dv_resp, run_id)
+            log_conversation(model, cond, "post", msgs_b, dv_resp, run_id, f"exp{study}")
 
             row = {
                 "run_id": run_id,
@@ -355,6 +355,7 @@ def main():
             return row
 
         # Use ThreadPoolExecutor to parallelize over conditions
+        exp_label = f"exp{study}"
         with ThreadPoolExecutor(max_workers=10) as executor:
             future_to_cond = {executor.submit(process_condition, cond): cond for cond in cond_sequence}
             for future in tqdm(as_completed(future_to_cond), total=len(future_to_cond), desc=f"{model}"):
