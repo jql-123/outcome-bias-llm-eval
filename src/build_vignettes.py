@@ -51,6 +51,15 @@ TRAFFIC_WITHIN = (
     / "Qualtrics Exports/Exp 6 and Exp 7/Intersection_BWS_WS-2.docx"
 )
 
+# ----- New expert-probability sources (Experiment 6) -----
+
+FLOOD_EXPERT_SRC = ROOT / "Qualtrics Exports" / "Exp 5" / "Flood_expert_probability_2-3.docx"
+TRAFFIC_EXPERT_SRC = ROOT / "Qualtrics Exports" / "Exp 9 and Exp 10" / "Intersection_multiple_endings__expert_prob-3.docx"
+
+# Paths inside data/raw after copying (for provenance and parsing)
+FLOOD_EXPERT = RAW_DIR / FLOOD_EXPERT_SRC.name
+TRAFFIC_EXPERT = RAW_DIR / TRAFFIC_EXPERT_SRC.name
+
 # Qualtrics block names we care about -> output key mapping
 BETWEEN_BLOCKS = {
     (FLOOD_BETWEEN, "A neutral ex ante"): "flood_good",
@@ -113,8 +122,10 @@ def _intro_and_outcome(full_text: str, good: bool) -> str:
 
 def _within_outcomes(full_text: str, good_phrase: str) -> tuple[str, str]:
     """Return (good_paragraph, bad_paragraph) in that order."""
-    good_idx = full_text.find(good_phrase)
-    bad_idx = full_text.find("It just so happens")
+    good_match = re.search(re.escape(good_phrase), full_text, flags=re.IGNORECASE)
+    bad_match = re.search("It just so happens", full_text, flags=re.IGNORECASE)
+    good_idx = good_match.start() if good_match else -1
+    bad_idx = bad_match.start() if bad_match else -1
     if good_idx == -1 or bad_idx == -1:
         raise ValueError("Could not locate good/bad outcome sentences in within-subjects file.")
 
@@ -151,7 +162,17 @@ def _clean(text: str) -> str:
 
 
 def main() -> None:
-    for p in [FLOOD_BETWEEN, TRAFFIC_BETWEEN, FLOOD_WITHIN, TRAFFIC_WITHIN]:
+    # Include expert sources in copy list
+    COPY_SRC = [
+        FLOOD_BETWEEN,
+        TRAFFIC_BETWEEN,
+        FLOOD_WITHIN,
+        TRAFFIC_WITHIN,
+        FLOOD_EXPERT_SRC,
+        TRAFFIC_EXPERT_SRC,
+    ]
+
+    for p in COPY_SRC:
         if not p.exists():
             raise FileNotFoundError(p)
         # Copy source files into data/raw for provenance
@@ -180,11 +201,117 @@ def main() -> None:
     )
     v["traffic_within"] = f"{_clean(good_para)}\n---\n{_clean(bad_para)}"
 
+    # ---------------- Expert-probability (Exp 6) -----------------
+
+    def _expert_intro_and_outcomes(doc_path: Path, good_phrase: str):
+        """Return (good_text, bad_text) for expert-probability files."""
+        txt = _doc_plain_text(doc_path)
+        txt = _clean(txt)
+
+        # Identify outcome paragraphs first
+        good_match = re.search(re.escape(good_phrase), txt, flags=re.IGNORECASE)
+        bad_match = re.search("It just so happens", txt, flags=re.IGNORECASE)
+        good_idx = good_match.start() if good_match else -1
+        bad_idx = bad_match.start() if bad_match else -1
+        if good_idx == -1 or bad_idx == -1:
+            raise ValueError("Outcome phrases not found in expert file.")
+
+        # Intro is everything before first outcome paragraph
+        intro = txt[:good_idx].strip()
+
+        # Extract outcome paragraphs
+        def _para(start: int) -> str:
+            end = txt.lower().find("on a scale", start)
+            return txt[start:end].strip()
+
+        good_para = _para(good_idx)
+        bad_para = _para(bad_idx)
+
+        # Find expert sentence anywhere after intro (expert witness / traffic expert)
+        m_exp = re.search(r"(?:expert witness|traffic expert)[^.]*?\d+\s*%[^.]*?\.", txt[good_idx: bad_idx] + txt[bad_idx:], flags=re.IGNORECASE)
+        if not m_exp:
+            raise ValueError(f"Expert sentence not found in {doc_path.name}")
+        expert_line = m_exp.group(0).strip()
+
+        good_text = f"{intro}\n\n{expert_line}\n\n{good_para}"
+        bad_text = f"{intro}\n\n{expert_line}\n\n{bad_para}"
+        return good_text, bad_text
+
+    if FLOOD_EXPERT.exists():
+        flood_expert_phrase = (
+            "The case of Ms. Russel not installing the temporary flood barriers is brought to court. "
+            "An expert witness states that there was a 5% chance that there would be a flood this year."
+        )
+
+        def _insert_phrase(base: str, outcome_marker: str) -> str:
+            m = re.search(re.escape(outcome_marker), base, flags=re.IGNORECASE)
+            if not m:
+                return base  # fallback untouched
+            idx = m.start()
+            intro = base[:idx].strip()
+            outcome = base[idx:].strip()
+            return f"{intro}\n\n{flood_expert_phrase}\n\n{outcome}"
+
+        if "flood_good" in v:
+            v["flood_expert_good"] = _insert_phrase(v["flood_good"], "As during")
+        if "flood_bad" in v:
+            v["flood_expert_bad"] = _insert_phrase(v["flood_bad"], "It just so happens")
+
+    # Traffic expert extraction disabled for now due to parsing issues.
+    # if TRAFFIC_EXPERT.exists():
+    #     try:
+    #         tg, tb = _expert_intro_and_outcomes(
+    #             TRAFFIC_EXPERT,
+    #             "As usual",
+    #         )
+    #         v["traffic_expert_good"] = tg
+    #         v["traffic_expert_bad"] = tb
+    #     except ValueError as e:
+    #         print(f"[WARN] Skipping traffic expert extraction: {e}")
+
     # ---------------- Write JSON ----------------------
     out_path = DATA_DIR / "vignettes.json"
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w", encoding="utf-8") as f:
         json.dump(v, f, ensure_ascii=False, indent=2)
+
+    # -------------------------------------------------------------------
+    # Additionally write segmented parts for flood scenario (for Exp 5+)
+    # -------------------------------------------------------------------
+
+    if "flood_good" in v and "flood_bad" in v:
+        full_good = v["flood_good"]
+        full_bad = v["flood_bad"]
+
+        # Intro: everything up to first outcome sentence ("As during" or "It just so happens")
+        intro_match = re.search(r"As during|It just so happens", full_good)
+        if intro_match:
+            intro_text = full_good[: intro_match.start()].strip()
+        else:
+            intro_text = full_good  # fallback
+
+        # Outcomes
+        good_para = full_good[len(intro_text):].strip()
+        bad_para = full_bad[len(intro_text):].strip()
+
+        flood_expert_phrase = (
+            "The case of Ms. Russel not installing the temporary flood barriers is brought to court. "
+            "An expert witness states that there was a 5% chance that there would be a flood this year."
+        )
+
+        parts = {
+            "flood": {
+                "intro": intro_text,
+                "good_outcome": good_para,
+                "bad_outcome": bad_para,
+                "expert_phrase": flood_expert_phrase,
+            }
+        }
+
+        parts_path = DATA_DIR / "vignette_parts.json"
+        with parts_path.open("w", encoding="utf-8") as pf:
+            json.dump(parts, pf, ensure_ascii=False, indent=2)
+        print(f"Wrote {parts_path} with segmented vignette parts.")
 
     print(f"Wrote {out_path} with {len(v)} vignettes (expected 6).")
 

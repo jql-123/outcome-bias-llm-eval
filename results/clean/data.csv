@@ -929,3 +929,11 @@ run_id,model,study,condition,frame,P_anchor,GR_anchor,P_post,GR_post,Reckless,Ne
 2fa176ae,deepseek,3,flood_bad,experiment,30.0,40.0,30.0,40.0,5.0,6.0,5.0,4.0
 2fa176ae,deepseek,3,flood_bad,experiment,50.0,30.0,50.0,30.0,6.0,6.0,6.0,5.0
 2fa176ae,deepseek,3,flood_bad,experiment,50.0,30.0,50.0,30.0,6.0,6.0,6.0,5.0
+9ba69186,nano,3,traffic_bad,juror,5.0,80.0,5.0,80.0,6.0,6.0,5.0,4.0
+9ba69186,nano,3,flood_bad,juror,40.0,70.0,40.0,70.0,5.0,6.0,6.0,5.0
+9ba69186,nano,3,traffic_good,juror,5.0,85.0,5.0,85.0,3.0,4.0,5.0,3.0
+9ba69186,nano,3,flood_good,juror,30.0,40.0,30.0,40.0,3.0,4.0,4.0,3.0
+fe99e8b9,nano,3,flood_good,experiment,50.0,30.0,50.0,30.0,5.0,5.0,4.0,4.0
+fe99e8b9,nano,3,flood_bad,experiment,30.0,70.0,30.0,70.0,5.0,6.0,6.0,5.0
+f87f6e3a,nano,5,flood_expert_bad,bad,juror,5.0,50.0,5.0,5.0,6.0,5.0
+f87f6e3a,nano,5,flood_expert_good,neutral,juror,5.0,80.0,2.0,3.0,3.0,2.0

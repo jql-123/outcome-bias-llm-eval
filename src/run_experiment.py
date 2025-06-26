@@ -31,6 +31,12 @@ DATA_DIR = ROOT / "data"
 RESULTS_RAW = ROOT / "results" / "raw_calls"
 RESULTS_CLEAN = ROOT / "results" / "clean"
 
+EXPERT_COND = {
+    "flood_expert_good": "neutral",
+    "flood_expert_bad": "bad",
+    # traffic expert conditions disabled for now
+}
+
 
 def load_config():
     with open(ROOT / "config.yaml", "r") as f:
@@ -112,8 +118,8 @@ def log_conversation(model, condition, step, messages, response, run_id):
 
 
 def main():
-    parser_cli = argparse.ArgumentParser(description="Run Kneer & Skoczeń replication.")
-    parser_cli.add_argument("--study", type=int, choices=[2, 3], required=True)
+    parser_cli = argparse.ArgumentParser(description="Run replication experiments (Studies 2,3,6).")
+    parser_cli.add_argument("--study", type=int, choices=[2, 3, 5], required=True)
     parser_cli.add_argument("--models", nargs="+", required=True, help="Model aliases as in config.yaml section 'models'.")
     parser_cli.add_argument("--n", type=int, default=None, help="Number of completions per condition (overrides config).")
     parser_cli.add_argument("--total", type=int, default=None, help="Total completions per model (across all conditions). Overrides --n if provided.")
@@ -128,17 +134,17 @@ def main():
     models = args.models
     frame = args.frame
 
-    if study == 3:
+    if study == 5:
+        conditions = list(EXPERT_COND.keys())
+    elif study == 3:
+        # Only flood scenarios for now; traffic ignored
         conditions = [
             "flood_good",
             "flood_bad",
-            "traffic_good",
-            "traffic_bad",
         ]
-    else:  # study 2
+    else:  # study 2 – keep only flood within-subjects
         conditions = [
             "flood_within",
-            "traffic_within",
         ]
 
     run_id = uuid.uuid4().hex[:8]
@@ -168,13 +174,57 @@ def main():
         from concurrent.futures import ThreadPoolExecutor, as_completed
 
         def process_condition(cond):
+            if study == 5:
+                # Expert probability – single-step prompt
+                text = vignettes[cond]
+                prompt = prompts.build_expert_prompt(cond, text)
+                system_6 = prompts.get_system_6(frame)
+                msgs = [
+                    {"role": "system", "content": system_6},
+                    {"role": "user", "content": prompt},
+                ]
+                try:
+                    dv_resp = model_api.generate(model, msgs, n=1)[0]
+                    (
+                        P_post,
+                        GR_post,
+                        reckless,
+                        negligent,
+                        blame,
+                        punish,
+                    ) = parser.parse_six(dv_resp)
+                except Exception:
+                    return None
+
+                outcome = EXPERT_COND[cond]
+
+                log_conversation(model, cond, "expert", msgs, dv_resp, run_id)
+
+                row = {
+                    "run_id": run_id,
+                    "model": model,
+                    "study": study,
+                    "condition": cond,
+                    "outcome": outcome,
+                    "frame": frame,
+                    "P_post": P_post,
+                    "GR_post": GR_post,
+                    "Reckless": reckless,
+                    "Negligent": negligent,
+                    "Blame": blame,
+                    "Punish": punish,
+                }
+                return row
+
+            # ---------- Studies 2 & 3 (two-step anchoring) ----------
             full_text = vignettes[cond]
             intro_text = split_intro(full_text)
 
             # Step A: anchor
             anchor_prompt = prompts.build_anchor_prompt(cond, intro_text)
+            system_2 = prompts.get_system_2(frame)
             msgs_a = [
-                {"role": "system", "content": prompts.SYSTEM_2NUM},
+                {"role": "system", "content": system_2},
                 {"role": "user", "content": anchor_prompt},
             ]
             try:
