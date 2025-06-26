@@ -937,3 +937,13 @@ fe99e8b9,nano,3,flood_good,experiment,50.0,30.0,50.0,30.0,5.0,5.0,4.0,4.0
 fe99e8b9,nano,3,flood_bad,experiment,30.0,70.0,30.0,70.0,5.0,6.0,6.0,5.0
 f87f6e3a,nano,5,flood_expert_bad,bad,juror,5.0,50.0,5.0,5.0,6.0,5.0
 f87f6e3a,nano,5,flood_expert_good,neutral,juror,5.0,80.0,2.0,3.0,3.0,2.0
+2405f495,nano,6,flood_expert_bad,juror,5.0,50.0,5.0,50.0,5.0,6.0,6.0,6.0
+2405f495,nano,6,flood_expert_good,juror,5.0,50.0,5.0,50.0,4.0,5.0,5.0,3.0
+6158ea4e,nano,6,flood_expert_good,juror,5.0,75.0,5.0,75.0,3.0,4.0,4.0,3.0
+6158ea4e,nano,6,flood_expert_bad,juror,5.0,50.0,5.0,50.0,5.0,6.0,6.0,6.0
+43849e99,nano,6,flood_expert_bad,juror,5.0,50.0,5.0,50.0,6.0,5.0,6.0,6.0
+43849e99,nano,6,flood_expert_good,juror,5.0,50.0,5.0,50.0,2.0,4.0,3.0,2.0
+3799facd,nano,6,flood_expert_bad,juror,5.0,50.0,5.0,50.0,5.0,6.0,6.0,6.0
+3799facd,nano,6,flood_expert_good,juror,5.0,50.0,5.0,50.0,3.0,4.0,4.0,3.0
+9c838d82,nano,6,flood_expert_good,juror,25.0,50.0,25.0,50.0,4.0,5.0,5.0,4.0
+9c838d82,nano,6,flood_expert_bad,juror,20.0,40.0,20.0,40.0,5.0,6.0,6.0,6.0

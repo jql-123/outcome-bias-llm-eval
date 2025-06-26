@@ -138,4 +138,20 @@ def get_system_6_old(frame: str) -> str:  # noqa: E501
 def build_expert_prompt(key: str, text: str) -> str:
     """Build prompt for expert-probability (Exp 6) design."""
     params = _fill_placeholders(key)
-    return text.strip() + "\n\n" + POST_QUESTIONS.format(**params) 
+    return text.strip() + "\n\n" + POST_QUESTIONS.format(**params)
+
+# Generic helper when we already have the vignette body ready (intro/outcome/[expert])
+def build_post_prompt_from_body(
+    key: str,
+    body: str,
+    anchor_q1: float | int | str,
+    anchor_q2: float | int | str,
+) -> str:
+    """Create step-B prompt given a prepared body (without questions)."""
+    params = _fill_placeholders(key)
+    reminder = (
+        "We previously asked and you answered:\n"
+        f"  Q1 (objective probability) = {anchor_q1}\n"
+        f"  Q2 (good reasons) = {anchor_q2}\n\n"
+    )
+    return body.strip() + "\n\n" + reminder + POST_QUESTIONS.format(**params) 

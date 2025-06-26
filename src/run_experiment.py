@@ -48,6 +48,14 @@ def load_vignettes():
         return json.load(f)
 
 
+def load_parts():
+    parts_path = DATA_DIR / "vignette_parts.json"
+    if parts_path.exists():
+        with open(parts_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+
 def save_raw(run_id: str, model: str, condition: str, completions):
     RESULTS_RAW.mkdir(parents=True, exist_ok=True)
     out_path = RESULTS_RAW / f"{run_id}_{model}_{condition}.jsonl"
@@ -118,8 +126,8 @@ def log_conversation(model, condition, step, messages, response, run_id):
 
 
 def main():
-    parser_cli = argparse.ArgumentParser(description="Run replication experiments (Studies 2,3,6).")
-    parser_cli.add_argument("--study", type=int, choices=[2, 3, 5], required=True)
+    parser_cli = argparse.ArgumentParser(description="Run replication experiments (Studies 2,3,5,6).")
+    parser_cli.add_argument("--study", type=int, choices=[2, 3, 5, 6], required=True)
     parser_cli.add_argument("--models", nargs="+", required=True, help="Model aliases as in config.yaml section 'models'.")
     parser_cli.add_argument("--n", type=int, default=None, help="Number of completions per condition (overrides config).")
     parser_cli.add_argument("--total", type=int, default=None, help="Total completions per model (across all conditions). Overrides --n if provided.")
@@ -129,6 +137,7 @@ def main():
 
     cfg = load_config()
     vignettes = load_vignettes()
+    parts = load_parts()
 
     study = args.study
     models = args.models
@@ -142,10 +151,14 @@ def main():
             "flood_good",
             "flood_bad",
         ]
-    else:  # study 2 – keep only flood within-subjects
+    elif study == 2:
         conditions = [
             "flood_within",
         ]
+    elif study == 6:  # two-step expert probability
+        conditions = list(EXPERT_COND.keys())
+    else:
+        raise ValueError(f"Unknown study: {study}")
 
     run_id = uuid.uuid4().hex[:8]
 
@@ -174,6 +187,7 @@ def main():
         from concurrent.futures import ThreadPoolExecutor, as_completed
 
         def process_condition(cond):
+            # ---------------- Study 5 (single-step expert) -----------------
             if study == 5:
                 # Expert probability – single-step prompt
                 text = vignettes[cond]
@@ -216,7 +230,69 @@ def main():
                 }
                 return row
 
-            # ---------- Studies 2 & 3 (two-step anchoring) ----------
+            # ---------------- Study 6 (two-step expert) --------------------
+            if study == 6:
+                seg = parts.get("flood", {})
+                intro_text = seg.get("intro", "")
+                expert_line = seg.get("expert_phrase", "")
+                outcome_text = seg.get("bad_outcome" if cond.endswith("bad") else "good_outcome", "")
+
+                # Step A – anchor (intro only)
+                anchor_prompt = prompts.build_anchor_prompt(cond, intro_text)
+                msgs_a = [
+                    {"role": "system", "content": prompts.get_system_2(frame)},
+                    {"role": "user", "content": anchor_prompt},
+                ]
+                try:
+                    anchor_resp = model_api.generate(model, msgs_a, n=1)[0]
+                    P_anchor, GR_anchor = parser.parse_two(anchor_resp)
+                except Exception:
+                    return None
+
+                log_conversation(model, cond, "anchor", msgs_a, anchor_resp, run_id)
+
+                # Step B – intro + expert + outcome + reminder + 6 Qs
+                body = f"{intro_text}\n\n{expert_line}\n\n{outcome_text}"
+                post_prompt = prompts.build_post_prompt_from_body(
+                    cond, body, P_anchor, GR_anchor
+                )
+                msgs_b = [
+                    {"role": "system", "content": prompts.get_system_6(frame)},
+                    {"role": "user", "content": post_prompt},
+                ]
+                try:
+                    dv_resp = model_api.generate(model, msgs_b, n=1)[0]
+                    (
+                        P_post,
+                        GR_post,
+                        reckless,
+                        negligent,
+                        blame,
+                        punish,
+                    ) = parser.parse_six(dv_resp)
+                except Exception:
+                    return None
+
+                log_conversation(model, cond, "post", msgs_b, dv_resp, run_id)
+
+                row = {
+                    "run_id": run_id,
+                    "model": model,
+                    "study": study,
+                    "condition": cond,
+                    "frame": frame,
+                    "P_anchor": P_anchor,
+                    "GR_anchor": GR_anchor,
+                    "P_post": P_post,
+                    "GR_post": GR_post,
+                    "Reckless": reckless,
+                    "Negligent": negligent,
+                    "Blame": blame,
+                    "Punish": punish,
+                }
+                return row
+
+            # ---------------- Studies 2 & 3 -------------------------------
             full_text = vignettes[cond]
             intro_text = split_intro(full_text)
 
