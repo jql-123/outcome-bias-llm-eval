@@ -127,7 +127,7 @@ def log_conversation(model, condition, step, messages, response, run_id, exp_lab
 
 def main():
     parser_cli = argparse.ArgumentParser(description="Run replication experiments (Studies 2,3,5,6).")
-    parser_cli.add_argument("--study", type=int, choices=[2, 3, 5, 6], required=True)
+    parser_cli.add_argument("--study", type=int, choices=[1, 2, 3, 5, 6], required=True)
     parser_cli.add_argument("--models", nargs="+", required=True, help="Model aliases as in config.yaml section 'models'.")
     parser_cli.add_argument("--n", type=int, default=None, help="Number of completions per condition (overrides config).")
     parser_cli.add_argument("--total", type=int, default=None, help="Total completions per model (across all conditions). Overrides --n if provided.")
@@ -147,7 +147,7 @@ def main():
     if study == 5:
         # Single-step expert probability, one prompt per scenario
         conditions = [f"{scen}_expert_{suffix}" for scen in parts.keys() for suffix in ("good","bad")]
-    elif study == 3:
+    elif study == 1 or study == 3:
         # Anchor + outcome block for every scenario (good / bad)
         conditions = [f"{scen}_{suffix}" for scen in parts.keys() for suffix in ("good","bad")]
     elif study == 2:
@@ -284,6 +284,57 @@ def main():
                     "frame": frame,
                     "P_anchor": P_anchor,
                     "GR_anchor": GR_anchor,
+                    "P_post": P_post,
+                    "GR_post": GR_post,
+                    "Reckless": reckless,
+                    "Negligent": negligent,
+                    "Blame": blame,
+                    "Punish": punish,
+                }
+                return row
+
+            # ---------------- Study 1 (single-step baseline) --------------
+            if study == 1:
+                # Build full vignette intro + outcome similar to study 3 but single step
+                if cond in vignettes:
+                    full_text = vignettes[cond]
+                else:
+                    scen_key, outcome_suffix = cond.rsplit("_", 1)
+                    seg = parts.get(scen_key, {})
+                    intro_text = seg.get("intro", "")
+                    outcome_text = seg.get("bad_outcome" if outcome_suffix == "bad" else "good_outcome", "")
+                    full_text = f"{intro_text}\n\n{outcome_text}"
+
+                post_prompt = prompts.build_single_step_prompt(cond, full_text)
+                msgs = [
+                    {"role": "system", "content": prompts.get_system_6(frame)},
+                    {"role": "user", "content": post_prompt},
+                ]
+
+                try:
+                    dv_resp = model_api.generate(model, msgs, n=1)[0]
+                    (
+                        P_post,
+                        GR_post,
+                        reckless,
+                        negligent,
+                        blame,
+                        punish,
+                    ) = parser.parse_six(dv_resp)
+                except Exception:
+                    return None
+
+                outcome = "neutral" if cond.endswith("good") else "bad"
+
+                log_conversation(model, cond, "single", msgs, dv_resp, run_id, f"exp{study}")
+
+                row = {
+                    "run_id": run_id,
+                    "model": model,
+                    "study": study,
+                    "condition": cond,
+                    "outcome": outcome,
+                    "frame": frame,
                     "P_post": P_post,
                     "GR_post": GR_post,
                     "Reckless": reckless,

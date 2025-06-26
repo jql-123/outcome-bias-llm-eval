@@ -215,4 +215,17 @@ def build_post_prompt_from_body(
         f"  Q1 (objective probability) = {anchor_q1}\n"
         f"  Q2 (good reasons) = {anchor_q2}\n\n"
     )
-    return body.strip() + "\n\n" + reminder + POST_QUESTIONS.format(**params) 
+    return body.strip() + "\n\n" + reminder + POST_QUESTIONS.format(**params)
+
+# ---------------------------------------------------------------------------
+# Single-step baseline prompt (Study 1) – intro + outcome + 6 Qs (no reminder)
+# ---------------------------------------------------------------------------
+
+
+def build_single_step_prompt(key: str, body: str) -> str:
+    """Return prompt consisting of *body* (intro/outcome etc.) plus 6 DV questions.
+
+    Used in Study-1 where there is no anchor step and therefore no reminder.
+    """
+    params = _fill_placeholders(key)
+    return body.strip() + "\n\n" + POST_QUESTIONS.format(**params) 

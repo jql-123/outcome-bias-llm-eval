@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+import numpy as np
 from scipy.stats import ttest_ind
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,9 +30,12 @@ def main() -> None:
         raise FileNotFoundError("Clean data not found – run experiments first.")
 
     df = pd.read_csv(CLEAN_PATH)
-    df6 = df[df["study"] == 6]
+    df6 = df[df["study"] == 6].copy()
     if df6.empty:
         raise ValueError("No study 6 data present in clean CSV.")
+
+    # Derive outcome label: neutral if condition ends with 'good', else bad
+    df6["outcome"] = np.where(df6["condition"].astype(str).str.endswith("good"), "neutral", "bad")
 
     rows = []
     for model, g in df6.groupby("model"):
