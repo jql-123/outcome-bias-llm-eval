@@ -14,10 +14,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
-TABLE_PATH = ROOT / "results" / "tables" / "exp6_vs_baseline.csv"
-FIG_DIR = ROOT / "results" / "figures"
-FIG_DIR.mkdir(parents=True, exist_ok=True)
-OUT = FIG_DIR / "forest_d_by_model.png"
+# table path will be set via CLI args
 
 PALETTE = {"Baseline": "tab:blue", "Expert": "tab:green"}
 
@@ -31,11 +28,12 @@ def parse_ci(ci_str: str) -> tuple[float, float]:
         return float("nan"), float("nan")
 
 
-def main() -> None:
-    if not TABLE_PATH.exists():
-        raise FileNotFoundError("Run stats_expert_vs_baseline.py first.")
+def main(baseline: int = 3, expert: int = 6) -> None:
+    table_path = ROOT / "results" / "tables" / f"exp{expert}_vs_exp{baseline}.csv"
+    if not table_path.exists():
+        raise FileNotFoundError(f"Stats table {table_path.name} not found – run stats_expert_vs_baseline.py first with matching studies.")
 
-    df = pd.read_csv(TABLE_PATH)
+    df = pd.read_csv(table_path)
 
     # Extract CI strings into numeric columns ----------------------------------
     df[["d_no_low", "d_no_high"]] = df["CI_d_no"].apply(lambda s: pd.Series(parse_ci(s)))
@@ -80,9 +78,15 @@ def main() -> None:
 
     ax.legend(frameon=False, loc="upper right")
     fig.tight_layout()
-    fig.savefig(OUT, dpi=300)
-    print(OUT.relative_to(ROOT))
+    out = ROOT / "results" / "figures" / f"forest_d_by_model_exp{baseline}_vs_exp{expert}.png"
+    fig.savefig(out, dpi=300)
+    print(out.relative_to(ROOT))
 
 
 if __name__ == "__main__":
-    main() 
+    import argparse
+    parser = argparse.ArgumentParser(description="Forest plot per model for two studies.")
+    parser.add_argument("--baseline", type=int, default=3)
+    parser.add_argument("--expert", type=int, default=6)
+    args = parser.parse_args()
+    main(baseline=args.baseline, expert=args.expert) 

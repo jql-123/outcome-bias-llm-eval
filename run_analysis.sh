@@ -19,10 +19,23 @@
 # ----------------------------
 # User-configurable variables
 # ----------------------------
-FRAME="experiment"        # "juror" or "experiment"
-BASELINE_STUDY=3     # baseline study number (anchor/outcome design)
-EXPERT_STUDY=6       # expert-probability study number
+FRAME="juror"        # "juror" or "experiment"
+BASELINE_STUDY=1     # baseline study number
+EXPERT_STUDY=5       # comparison study number
 SCENARIO=""         # e.g. "flood" to restrict stats_expert_vs_baseline; leave empty for all
+
+# ---------------------------------------------------------------------------
+# Parse command-line overrides (e.g., --baseline 1 --expert 5 --frame experiment)
+# ---------------------------------------------------------------------------
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --baseline) BASELINE_STUDY="$2"; shift 2 ;;
+    --expert)   EXPERT_STUDY="$2";   shift 2 ;;
+    --frame)    FRAME="$2";          shift 2 ;;
+    --scenario) SCENARIO="$2";       shift 2 ;;
+    *) echo "Unknown arg $1"; exit 1 ;;
+  esac
+done
 
 # ----------------------------
 # Helper – exit on error
@@ -38,7 +51,7 @@ log() {
 # 1) Baseline bar chart (Study-${BASELINE_STUDY})
 # -----------------------------------------------------------------------------
 log "Plotting baseline bar chart (Study ${BASELINE_STUDY}, frame='${FRAME}')"
-python src/plot_all_dvs_by_model.py --frame "${FRAME}"
+python src/plot_all_dvs_by_model.py --frame "${FRAME}" --study "${BASELINE_STUDY}"
 
 # -----------------------------------------------------------------------------
 # 2) Expert-probability bar chart (Study-${EXPERT_STUDY})
@@ -51,18 +64,18 @@ python src/plot_expert.py --frame "${FRAME}" --study "${EXPERT_STUDY}"
 # -----------------------------------------------------------------------------
 log "Computing baseline vs expert stats table"
 if [[ -n "${SCENARIO}" ]]; then
-  python src/stats_expert_vs_baseline.py --scenario "${SCENARIO}"
+  python src/stats_expert_vs_baseline.py --baseline "${BASELINE_STUDY}" --expert "${EXPERT_STUDY}" --scenario "${SCENARIO}"
 else
-  python src/stats_expert_vs_baseline.py
+  python src/stats_expert_vs_baseline.py --baseline "${BASELINE_STUDY}" --expert "${EXPERT_STUDY}"
 fi
 
 # -----------------------------------------------------------------------------
 # 4) Forest, scatter, and Δd plots using the stats table
 # -----------------------------------------------------------------------------
 log "Drawing forest, scatter, and Δd plots"
-python src/plot_forest_d.py
-python src/plot_scatter_d.py
-python src/plot_delta_d.py
+python src/plot_forest_d.py --baseline "${BASELINE_STUDY}" --expert "${EXPERT_STUDY}"
+python src/plot_scatter_d.py --baseline "${BASELINE_STUDY}" --expert "${EXPERT_STUDY}"
+python src/plot_delta_d.py --baseline "${BASELINE_STUDY}" --expert "${EXPERT_STUDY}"
 
 # Per–model scatter
 python src/plot_scatter_d_by_model.py
@@ -74,7 +87,7 @@ python src/plot_forest_d_by_model.py --baseline "${BASELINE_STUDY}" --expert "${
 # 5) Outcome × Expert two-way ANOVA interaction (anova_interactions.csv)
 # -----------------------------------------------------------------------------
 log "Running two-way ANOVA interaction analysis"
-python src/anova_expert_interaction.py
+python src/anova_expert_interaction.py --baseline "${BASELINE_STUDY}" --expert "${EXPERT_STUDY}"
 
 # -----------------------------------------------------------------------------
 # 6) Study-6 per-model dstats (exp6_stats.csv)

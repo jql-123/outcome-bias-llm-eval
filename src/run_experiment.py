@@ -57,7 +57,11 @@ def save_raw(run_id: str, model: str, condition: str, completions):
     out_path = RESULTS_RAW / f"{run_id}_{model}_{condition}.jsonl"
     with open(out_path, "w", encoding="utf-8") as f:
         for c in completions:
-            f.write(json.dumps({"text": c}, ensure_ascii=False) + "\n")
+            # If caller already provides a dict, dump as-is; else wrap string
+            if isinstance(c, dict):
+                f.write(json.dumps(c, ensure_ascii=False, default=str) + "\n")
+            else:
+                f.write(json.dumps({"text": c}, ensure_ascii=False) + "\n")
 
 
 def append_clean(run_id: str, model: str, study: int, condition: str, completions):
@@ -207,6 +211,11 @@ def main():
                 ]
                 try:
                     dv_resp = model_api.generate(model, msgs, n=1)[0]
+                    last_raw = model_api.LAST_RAW  # type: ignore[attr-defined]
+
+                    # Persist raw output for inspection (saved even when parsing succeeds)
+                    save_raw(run_id, model, cond, [{"text": dv_resp, "raw": str(last_raw)}])
+
                     (
                         P_post,
                         GR_post,
@@ -215,7 +224,9 @@ def main():
                         blame,
                         punish,
                     ) = parser.parse_six(dv_resp)
-                except Exception:
+                except Exception as e:
+                    # Already saved above; nothing more to do
+                    print(f"[WARN] Could not parse completion for {model}/{cond}: {e}")
                     return None
 
                 outcome = "neutral" if cond.endswith("good") else "bad"
@@ -272,6 +283,11 @@ def main():
                 ]
                 try:
                     dv_resp = model_api.generate(model, msgs_b, n=1)[0]
+                    last_raw = model_api.LAST_RAW  # type: ignore[attr-defined]
+
+                    # Persist raw output for inspection (saved even when parsing succeeds)
+                    save_raw(run_id, model, cond, [{"text": dv_resp, "raw": str(last_raw)}])
+
                     (
                         P_post,
                         GR_post,
@@ -322,6 +338,11 @@ def main():
 
                 try:
                     dv_resp = model_api.generate(model, msgs, n=1)[0]
+                    last_raw = model_api.LAST_RAW  # type: ignore[attr-defined]
+
+                    # Persist raw output for inspection (saved even when parsing succeeds)
+                    save_raw(run_id, model, cond, [{"text": dv_resp, "raw": str(last_raw)}])
+
                     (
                         P_post,
                         GR_post,
@@ -330,7 +351,9 @@ def main():
                         blame,
                         punish,
                     ) = parser.parse_six(dv_resp)
-                except Exception:
+                except Exception as e:
+                    # Already saved above; nothing more to do
+                    print(f"[WARN] Could not parse completion for {model}/{cond}: {e}")
                     return None
 
                 outcome = "neutral" if cond.endswith("good") else "bad"
@@ -393,6 +416,11 @@ def main():
             ]
             try:
                 dv_resp = model_api.generate(model, msgs_b, n=1)[0]
+                last_raw = model_api.LAST_RAW  # type: ignore[attr-defined]
+
+                # Persist raw output for inspection (saved even when parsing succeeds)
+                save_raw(run_id, model, cond, [{"text": dv_resp, "raw": str(last_raw)}])
+
                 (
                     P_post,
                     GR_post,
@@ -401,7 +429,9 @@ def main():
                     blame,
                     punish,
                 ) = parser.parse_six(dv_resp)
-            except Exception:
+            except Exception as e:
+                # Already saved above; nothing more to do
+                print(f"[WARN] Could not parse completion for {model}/{cond}: {e}")
                 return None
 
             # For post-outcome step
@@ -429,7 +459,13 @@ def main():
         with ThreadPoolExecutor(max_workers=10) as executor:
             future_to_cond = {executor.submit(process_condition, cond): cond for cond in cond_sequence}
             for future in tqdm(as_completed(future_to_cond), total=len(future_to_cond), desc=f"{model}"):
-                row = future.result()
+                try:
+                    row = future.result()
+                except Exception as exc:
+                    # Log the error but continue processing remaining conditions
+                    print(f"[WARN] {model} – {future_to_cond[future]} raised: {exc}")
+                    continue  # skip this condition but keep processing others
+
                 if row is not None:
                     save_row(row)
 

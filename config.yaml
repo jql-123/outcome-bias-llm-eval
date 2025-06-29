@@ -8,14 +8,39 @@ models:
     provider: openai
     temperature: 1.2
 
+
   haiku:
     id: claude-3-haiku-20240307
     provider: anthropic
     temperature: 0.9
-    system_prompt: |
-      You are a careful juror. Return exactly five numbers…
 
   deepseek:
     id: deepseek-chat
     provider: deepseek
-    temperature: 0.9 
+    temperature: 0.9
+
+  # ─── New additions ────────────────────────────────────────────────────────────
+  gpt4o:
+    id: gpt-4o                 # flagship GPT-4o model :contentReference[oaicite:0]{index=0}
+    provider: openai
+    temperature: 1.0
+
+  o1mini:
+    id: o1-mini               # small, fast o-series model (still available) :contentReference[oaicite:1]{index=1}
+    provider: openai
+    temperature: 1.0
+
+  o4mini:
+    id: o4-mini               # newest mini reasoning model :contentReference[oaicite:2]{index=2}
+    provider: openai
+    temperature: 1.0
+
+  sonnet4:
+    id: claude-sonnet-4-20250514   # Claude Sonnet 4 snapshot :contentReference[oaicite:3]{index=3}
+    provider: anthropic
+    temperature: 0.9
+
+  deepseekr1:
+    id: deepseek-reasoner      # DeepSeek-R1 reasoning model :contentReference[oaicite:4]{index=4}
+    provider: deepseek
+    temperature: 0.9

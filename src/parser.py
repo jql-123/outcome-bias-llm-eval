@@ -46,18 +46,30 @@ def parse_two(text: str):
     vals = [max(0, min(v, 100)) for v in vals]  # both 0-100
     return tuple(vals)
 
-def parse_six(text: str):
+def _remove_fences(text: str) -> str:
+    """Remove leading/trailing ``` or ```json fences produced by some models."""
     text = text.strip()
+    if text.startswith("```"):
+        parts = text.split("```")
+        if len(parts) >= 3:
+            return parts[1].strip()
+        # fallback: drop first fence
+        return "```".join(parts[1:]).strip()
+    return text
+
+def parse_six(text: str):
+    text = _remove_fences(text)
     if text.startswith("{"):
         try:
             data = _json.loads(text)
+            lower = {k.lower(): v for k, v in data.items()}
             return (
-                float(data["objective_probability"]),
-                float(data["good_reasons"]),
-                float(data["recklessness"]),
-                float(data["negligence"]),
-                float(data["blameworthiness"]),
-                float(data["punishment"]),
+                float(lower["objective_probability"]),
+                float(lower["good_reasons"]),
+                float(lower["recklessness"]),
+                float(lower["negligence"]),
+                float(lower["blameworthiness"]),
+                float(lower["punishment"]),
             )
         except Exception:
             pass

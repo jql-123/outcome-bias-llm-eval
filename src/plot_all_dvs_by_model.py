@@ -71,19 +71,15 @@ def derive_outcome(condition: str) -> str:
 # Main
 # ---------------------------------------------------------------------------
 
-def main(frame: str = "juror") -> None:
+def main(frame: str = "juror", study: int = 3) -> None:
     df = load_data()
-    out_fname = f"all_dvs_exp3_{frame}.png"
-    plot_by_model_generic(df, study=3, frame=frame, out_filename=out_fname)
+    out_fname = f"all_dvs_exp{study}_{frame}.png"
+    plot_by_model_generic(df, study=study, frame=frame, out_filename=out_fname)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Plot all DVs by model (faceted barplot).")
-    parser.add_argument(
-        "--frame",
-        type=str,
-        default="juror",
-        help="Frame to filter on (e.g., 'juror' or 'experiment').",
-    )
+    parser.add_argument("--frame", type=str, default="juror", help="Frame filter (juror or experiment)")
+    parser.add_argument("--study", type=int, default=3, help="Study number to plot (e.g., 1, 3)")
     args = parser.parse_args()
-    main(frame=args.frame) 
+    main(frame=args.frame, study=args.study) 

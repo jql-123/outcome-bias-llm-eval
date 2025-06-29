@@ -14,17 +14,16 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
-TABLE_PATH = ROOT / "results" / "tables" / "exp6_vs_baseline.csv"
 FIG_DIR = ROOT / "results" / "figures"
 FIG_DIR.mkdir(parents=True, exist_ok=True)
-OUT = FIG_DIR / "scatter_d_by_model.png"
 
 
-def main() -> None:
-    if not TABLE_PATH.exists():
-        raise FileNotFoundError("Run stats_expert_vs_baseline.py first.")
+def main(baseline: int = 3, expert: int = 6) -> None:
+    table_path = ROOT / "results" / "tables" / f"exp{expert}_vs_exp{baseline}.csv"
+    if not table_path.exists():
+        raise FileNotFoundError("Run stats_expert_vs_baseline.py first with matching studies.")
 
-    df = pd.read_csv(TABLE_PATH)
+    df = pd.read_csv(table_path)
 
     models = df["DV"].unique()  # actually models not present, but treat aggregated
     # Since stats table is aggregated across models, we make single scatter.
@@ -47,9 +46,15 @@ def main() -> None:
     ax.set_aspect("equal", "box")
 
     fig.tight_layout()
-    fig.savefig(OUT)
-    print(OUT.relative_to(ROOT))
+    out = FIG_DIR / f"scatter_d_by_model_exp{baseline}_vs_exp{expert}.png"
+    fig.savefig(out)
+    print(out.relative_to(ROOT))
 
 
 if __name__ == "__main__":
-    main() 
+    import argparse
+    parser = argparse.ArgumentParser(description="Scatter plot d baseline vs expert.")
+    parser.add_argument("--baseline", type=int, default=3)
+    parser.add_argument("--expert", type=int, default=6)
+    args = parser.parse_args()
+    main(baseline=args.baseline, expert=args.expert) 

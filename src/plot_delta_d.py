@@ -19,17 +19,16 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
-TABLE_PATH = ROOT / "results" / "tables" / "exp6_vs_baseline.csv"
 FIG_DIR = ROOT / "results" / "figures"
 FIG_DIR.mkdir(parents=True, exist_ok=True)
-OUT_PATH = FIG_DIR / "delta_d_exp6.png"
 
 
-def main() -> None:
-    if not TABLE_PATH.exists():
-        raise FileNotFoundError("Run stats_expert_vs_baseline.py first to generate the table.")
+def main(baseline: int = 3, expert: int = 6) -> None:
+    table_path = ROOT / "results" / "tables" / f"exp{expert}_vs_exp{baseline}.csv"
+    if not table_path.exists():
+        raise FileNotFoundError("Run stats_expert_vs_baseline.py first to generate the table with matching studies.")
 
-    df = pd.read_csv(TABLE_PATH)
+    df = pd.read_csv(table_path)
 
     dvs = df["DV"].tolist()
     d_no = df["d_no"].abs().values
@@ -63,9 +62,16 @@ def main() -> None:
     ax.set_title("Effect size reduction with expert probability")
     ax.legend(frameon=False, loc="upper right")
     fig.tight_layout()
-    fig.savefig(OUT_PATH, dpi=300)
-    print(OUT_PATH.relative_to(ROOT))
+
+    out_path = FIG_DIR / f"delta_d_exp{expert}_vs_exp{baseline}.png"
+    fig.savefig(out_path, dpi=300)
+    print(out_path.relative_to(ROOT))
 
 
 if __name__ == "__main__":
-    main() 
+    import argparse
+    parser = argparse.ArgumentParser(description="Delta d plot between two studies.")
+    parser.add_argument("--baseline", type=int, default=3)
+    parser.add_argument("--expert", type=int, default=6)
+    args = parser.parse_args()
+    main(baseline=args.baseline, expert=args.expert) 

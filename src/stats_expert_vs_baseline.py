@@ -11,11 +11,11 @@ The script outputs two artefacts
 
 Usage
 -----
-# All scenarios (default)
+# All scenarios (default baseline=3, expert=6)
 python src/stats_expert_vs_baseline.py
 
-# Single scenario only, e.g. flood
-python src/stats_expert_vs_baseline.py --scenario flood
+# Custom study numbers and/or scenario filter
+python src/stats_expert_vs_baseline.py --baseline 1 --expert 5 --scenario flood
 """
 from __future__ import annotations
 
@@ -83,7 +83,7 @@ def ci95(a: Any, b: Any) -> tuple[float, float]:
 # Main analysis
 # ---------------------------------------------------------------------------
 
-def main(scenario: str | None = None) -> None:  # noqa: C901  (keep flat for clarity)
+def main(baseline: int = 3, expert: int = 6, scenario: str | None = None) -> None:  # noqa: C901
     if not DATA_PATH.exists():
         raise FileNotFoundError("Cleaned data not found – run experiments first.")
 
@@ -93,12 +93,12 @@ def main(scenario: str | None = None) -> None:  # noqa: C901  (keep flat for cla
     if scenario:
         df = df[df["condition"].str.startswith(scenario)]
 
-    # Baseline (Study-3) and expert (Study-6) subsets -----------------------------
-    base = df[df["study"] == 3].copy()
-    expert = df[df["study"] == 6].copy()
+    # Baseline and expert subsets -------------------------------------------------
+    base = df[df["study"] == baseline].copy()
+    expert_df = df[df["study"] == expert].copy()
 
     # Outcome column: neutral (good suffix) or bad --------------------------------
-    for sub in (base, expert):
+    for sub in (base, expert_df):
         sub["outcome"] = np.where(
             sub["condition"].astype(str).str.endswith("good"),  # type: ignore[attr-defined]
             "neutral",
@@ -129,8 +129,8 @@ def main(scenario: str | None = None) -> None:  # noqa: C901  (keep flat for cla
         # ---------------------------------------------------------------------
         # Expert stats
         # ---------------------------------------------------------------------
-        e_bad = expert[expert["outcome"] == "bad"][dv]
-        e_neu = expert[expert["outcome"] == "neutral"][dv]
+        e_bad = expert_df[expert_df["outcome"] == "bad"][dv]
+        e_neu = expert_df[expert_df["outcome"] == "neutral"][dv]
         t1, p1 = ttest_ind(e_bad, e_neu, equal_var=False, nan_policy="omit")
         d1 = cohens_d(e_bad, e_neu)
         ci1_low_d, ci1_high_d = d_ci(d1, len(e_bad), len(e_neu))
@@ -152,7 +152,7 @@ def main(scenario: str | None = None) -> None:  # noqa: C901  (keep flat for cla
             return pd.Series(dtype=float)
 
         delta_base = _prepare_delta(base)  # type: ignore[arg-type]
-        delta_expert = _prepare_delta(expert)  # type: ignore[arg-type]
+        delta_expert = _prepare_delta(expert_df)  # type: ignore[arg-type]
 
         if not delta_base.empty and not delta_expert.empty:
             t_mod, p_mod = ttest_ind(delta_base, delta_expert, equal_var=False, nan_policy="omit")
@@ -219,7 +219,8 @@ def main(scenario: str | None = None) -> None:  # noqa: C901  (keep flat for cla
     out_df = pd.DataFrame(rows, columns=columns)  # type: ignore[arg-type]
 
     # Save raw numbers -----------------------------------------------------------
-    out_df.to_csv(OUT_CSV, index=False)
+    out_csv = TABLE_DIR / f"exp{expert}_vs_exp{baseline}.csv"
+    out_df.to_csv(out_csv, index=False)
 
     # Print LaTeX table ----------------------------------------------------------
     latex_table = out_df.to_latex(index=False, float_format="%.2f", escape=False)
@@ -227,12 +228,16 @@ def main(scenario: str | None = None) -> None:  # noqa: C901  (keep flat for cla
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Compare baseline (Study 3) vs expert probability (Study 6).")
+    parser = argparse.ArgumentParser(description="Compare two studies (baseline vs expert probability).")
     parser.add_argument(
-        "--scenario",
-        type=str,
-        default=None,
+        "--baseline", type=int, default=3, help="Baseline study number (e.g., 1,3)"
+    )
+    parser.add_argument(
+        "--expert", type=int, default=6, help="Expert/comparison study number (e.g.,5,6)"
+    )
+    parser.add_argument(
+        "--scenario", type=str, default=None,
         help="Filter to a single scenario key (e.g. 'flood'); omit for all scenarios.",
     )
     args = parser.parse_args()
-    main(scenario=args.scenario) 
+    main(baseline=args.baseline, expert=args.expert, scenario=args.scenario) 

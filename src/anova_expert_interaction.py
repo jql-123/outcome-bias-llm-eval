@@ -82,18 +82,19 @@ def partial_eta_sq(ss_effect: float, ss_error: float) -> float:
 # Main analysis
 # ---------------------------------------------------------------------------
 
-def main() -> None:
+def main(baseline: int = 3, expert: int = 6, scenario_prefix: str = "flood") -> None:
     if not DATA_PATH.exists():
         raise FileNotFoundError("Clean data not found – run experiments first.")
 
     df = pd.read_csv(DATA_PATH)
 
-    # Keep flood scenario from studies 3 and 6 only --------------------------------
-    df = df[df["condition"].str.startswith("flood")]
-    df = df[df["study"].isin([3, 6])].copy()
+    # Restrict to chosen studies and optional scenario prefix ----------------------
+    df = df[df["study"].isin([baseline, expert])].copy()
+    if scenario_prefix:
+        df = df[df["condition"].str.startswith(scenario_prefix)]
 
     # Factors
-    df["Expert"] = (df["study"] == 6).astype(int)
+    df["Expert"] = (df["study"] == expert).astype(int)
     df["Outcome"] = np.where(df["condition"].str.endswith("good"), "neutral", "bad")
 
     rows: list[list[object]] = []
@@ -118,7 +119,8 @@ def main() -> None:
         rows.append([dv, f_val, p_val, eta])
 
     out_df = pd.DataFrame(rows, columns=["DV", "F_interaction", "p_interaction", "eta_sq_partial"])
-    out_df.to_csv(OUT_CSV, index=False)
+    out_csv = OUT_DIR / f"anova_interactions_exp{expert}_vs_exp{baseline}.csv"
+    out_df.to_csv(out_csv, index=False)
 
     print(out_df.to_string(index=False, float_format="{:.3f}".format))
 
@@ -130,4 +132,10 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main() 
+    import argparse
+    parser = argparse.ArgumentParser(description="Two-way ANOVA interaction for two studies.")
+    parser.add_argument("--baseline", type=int, default=3, help="Baseline study number")
+    parser.add_argument("--expert", type=int, default=6, help="Expert study number")
+    parser.add_argument("--scenario", type=str, default="flood", help="Scenario prefix to filter (default flood)")
+    args = parser.parse_args()
+    main(baseline=args.baseline, expert=args.expert, scenario_prefix=args.scenario) 

@@ -10,6 +10,8 @@ import dotenv
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = {}
+# Global debug hook – holds the latest raw provider response so callers can persist it if needed.
+LAST_RAW: object | None = None
 
 
 def _load_config():
@@ -34,22 +36,46 @@ def _openai_call(messages: List[dict], n: int, cfg) -> List[str]:
     import openai
     # Convert messages to OpenAI ChatCompletionMessageParam format
     chat_messages = []
-    for m in messages:
-        if m["role"] == "system":
-            chat_messages.append({"role": "system", "content": m["content"]})
-        elif m["role"] == "user":
-            chat_messages.append({"role": "user", "content": m["content"]})
+    for idx, m in enumerate(messages):
+        role = m["role"]
+        content = m["content"]
+        if role == "system":
+            # Some mini models (o1-mini, o4-mini) do not yet support the system role
+            if any(s in cfg["id"] for s in ("o1-mini", "o4-mini", "o3-mini")):
+                # prepend marker so we don't lose the instruction
+                role = "user"
+                content = f"<system>{content}</system>"
+            chat_messages.append({"role": role, "content": content})
+        elif role == "user":
+            chat_messages.append({"role": "user", "content": content})
         else:
-            raise ValueError(f"Unknown message role: {m['role']}")
+            raise ValueError(f"Unknown message role: {role}")
     client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    response = client.chat.completions.create(
-        model=cfg["id"],
-        messages=chat_messages,
-        temperature=cfg.get("temperature", 1.0),
-        top_p=cfg.get("top_p", 0.95),
-        max_tokens=cfg.get("max_tokens", 600),
-        n=n,
-    )
+    # Some newer OpenAI models (e.g. o1-mini, o4-mini) renamed the argument
+    # from `max_tokens` → `max_completion_tokens`. Detect and switch.
+    max_param_name = "max_tokens"
+    if any(s in cfg["id"] for s in ("o1-mini", "o4-mini", "o3-mini")):
+        max_param_name = "max_completion_tokens"
+
+    create_kwargs = {
+        "model": cfg["id"],
+        "messages": chat_messages,
+        "temperature": cfg.get("temperature", 1.0),
+        max_param_name: cfg.get("max_tokens", 600),
+        "n": n,
+    }
+
+    # top_p is not yet supported on some mini models
+    if max_param_name == "max_tokens":  # regular models
+        create_kwargs["top_p"] = cfg.get("top_p", 0.95)
+
+    # Remove the other param to avoid 400 errors
+    if max_param_name == "max_completion_tokens" and "max_tokens" in create_kwargs:
+        create_kwargs.pop("max_tokens", None)
+
+    response = client.chat.completions.create(**create_kwargs)
+    global LAST_RAW
+    LAST_RAW = response
     return [choice.message.content.strip() if choice.message and choice.message.content else "" for choice in response.choices]
 
 
@@ -117,15 +143,38 @@ def _deepseek_call(messages: List[dict], n: int, cfg) -> List[str]:
     return outs
 
 
-CALL_MAP = {
-    "nano": _openai_call,
-    "haiku": _anthropic_call,
-    "deepseek": _deepseek_call,
-}
+# Keys in config.yaml that should use the new `responses.create` endpoint instead
+# of the legacy chat-completions. These are the "mini" reasoning models.
+_REASONING_MODELS = {"o1mini", "o4mini", "o3mini"}
+
+def _is_reasoning_model(model_key: str, cfg) -> bool:
+    """Return True when this model should be queried via the `responses` API."""
+    # Either the config-key is explicitly listed or the actual deployed id ends with '-mini'
+    return model_key in _REASONING_MODELS or cfg.get("id", "").endswith("-mini")
 
 
-def generate(model_key: str, messages: List[dict], n: int) -> List[str]:
+def _openai_reasoning_call(messages: list[dict], n: int, cfg) -> list[str]:
+    import openai, json
+    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    user_prompt = "\n\n".join(m["content"] for m in messages if m["role"] == "user")
+    # Provide a generous token budget so the model has room for the reasoning
+    # phase **and** the final answer. 1500 works well in practice and is still
+    # within the 4-mini hard limit (8192).
+    token_budget = max(cfg.get("max_tokens", 600), 1500)
+
+    resp = client.responses.create(
+        model=cfg["id"],
+        reasoning={"effort": "medium"},
+        input=[{"role": "user", "content": user_prompt}],
+        max_output_tokens=token_budget,
+    )
+    global LAST_RAW
+    LAST_RAW = resp
+    return [resp.output_text.strip()]
+
+
+def generate(model_key: str, messages: list[dict], n: int):
     cfg = _load_config()["models"][model_key]
-    if model_key not in CALL_MAP:
-        raise ValueError(f"Unknown model key '{model_key}'")
-    return CALL_MAP[model_key](messages, n, cfg) 
+    if _is_reasoning_model(model_key, cfg):
+        return _openai_reasoning_call(messages, n, cfg)
+    return _openai_call(messages, n, cfg) 

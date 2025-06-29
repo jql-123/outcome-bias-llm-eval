@@ -104,12 +104,22 @@ def main(scenario: str | None = None) -> None:  # noqa: C901 (keep flat for clar
             xs.append(d_base)
             ys.append(d_exp)
 
+        # Remove NaNs (happens if model missing data)
+        xs_clean = [x for x in xs if not np.isnan(x)]
+        ys_clean = [y for y in ys if not np.isnan(y)]
+
+        if not xs_clean or not ys_clean:
+            ax.set_visible(False)
+            continue
+
         # Scatter ---------------------------------------------------------
         ax.axline((0, 0), slope=1, color="grey", lw=1)
-        ax.scatter(xs, ys, color="tab:blue")
+        ax.scatter(xs_clean, ys_clean, color="tab:blue")
 
         # Annotate DV labels (offset to reduce overlap) -------------------
         for x, y, label in zip(xs, ys, DVS, strict=True):
+            if np.isnan(x) or np.isnan(y):
+                continue
             ax.text(x + 0.05, y + 0.05, label, fontsize=8)
 
         ax.set_title(model)
@@ -117,12 +127,23 @@ def main(scenario: str | None = None) -> None:  # noqa: C901 (keep flat for clar
         if ax is axes[0]:
             ax.set_ylabel("d (Expert)")
 
-    # Square limits across all axes ------------------------------------------
-    all_vals = xs + ys  # last iteration values; fine because axes share data range
-    lims = [min(all_vals + [0]) - 1.0, max(all_vals + [0]) + 1.0]
+    # Determine global limits across axes excluding NaNs
+    all_vals = []
     for ax in axes:
-        ax.set_xlim(lims)
-        ax.set_ylim(lims)
+        if not ax.get_visible():
+            continue
+        for coll in ax.collections:
+            all_vals.extend(coll.get_offsets().data.flatten().tolist())
+    finite_vals = [v for v in all_vals if np.isfinite(v)]
+    if finite_vals:
+        lim_min = min(finite_vals) - 1.0
+        lim_max = max(finite_vals) + 1.0
+    else:
+        lim_min, lim_max = -1.0, 1.0
+
+    for ax in axes:
+        ax.set_xlim(lim_min, lim_max)
+        ax.set_ylim(lim_min, lim_max)
         ax.set_aspect("equal", "box")
 
     fig.tight_layout()
