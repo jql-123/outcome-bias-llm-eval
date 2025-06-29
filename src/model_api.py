@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import List
+from typing import List, Any
 
 import dotenv
 
@@ -57,17 +57,27 @@ def _openai_call(messages: List[dict], n: int, cfg) -> List[str]:
     if any(s in cfg["id"] for s in ("o1-mini", "o4-mini", "o3-mini")):
         max_param_name = "max_completion_tokens"
 
+    # Use larger token budget for the mini models – their reasoning often
+    # consumes >600 tokens before the final answer. Default to 1500 unless the
+    # user explicitly set a higher value in config.yaml.
+    token_budget = max(cfg.get("max_tokens", 600), 1500) if "-mini" in cfg["id"] else cfg.get("max_tokens", 600)
+
     create_kwargs = {
         "model": cfg["id"],
         "messages": chat_messages,
         "temperature": cfg.get("temperature", 1.0),
-        max_param_name: cfg.get("max_tokens", 600),
+        max_param_name: token_budget,
         "n": n,
     }
 
     # top_p is not yet supported on some mini models
     if max_param_name == "max_tokens":  # regular models
         create_kwargs["top_p"] = cfg.get("top_p", 0.95)
+
+    # All mini models: use legacy function calling to return strict JSON
+    if "-mini" in cfg["id"]:
+        create_kwargs["functions"] = [JURY_SCHEMA]
+        create_kwargs["function_call"] = {"name": "jury_scoring"}
 
     # Remove the other param to avoid 400 errors
     if max_param_name == "max_completion_tokens" and "max_tokens" in create_kwargs:
@@ -76,7 +86,7 @@ def _openai_call(messages: List[dict], n: int, cfg) -> List[str]:
     response = client.chat.completions.create(**create_kwargs)
     global LAST_RAW
     LAST_RAW = response
-    return [choice.message.content.strip() if choice.message and choice.message.content else "" for choice in response.choices]
+    return [_choice_to_text(choice) for choice in response.choices]
 
 
 def _anthropic_call(messages: List[dict], n: int, cfg) -> List[str]:
@@ -143,14 +153,13 @@ def _deepseek_call(messages: List[dict], n: int, cfg) -> List[str]:
     return outs
 
 
-# Keys in config.yaml that should use the new `responses.create` endpoint instead
-# of the legacy chat-completions. These are the "mini" reasoning models.
-_REASONING_MODELS = {"o1mini", "o4mini", "o3mini"}
+# Config keys that should use the `responses.create` endpoint. Currently only
+# o4mini (and future o3mini) support it; o1-mini must stay on chat-completions.
+_REASONING_MODELS = {"o3mini"}
 
 def _is_reasoning_model(model_key: str, cfg) -> bool:
     """Return True when this model should be queried via the `responses` API."""
-    # Either the config-key is explicitly listed or the actual deployed id ends with '-mini'
-    return model_key in _REASONING_MODELS or cfg.get("id", "").endswith("-mini")
+    return model_key in _REASONING_MODELS
 
 
 def _openai_reasoning_call(messages: list[dict], n: int, cfg) -> list[str]:
@@ -162,19 +171,74 @@ def _openai_reasoning_call(messages: list[dict], n: int, cfg) -> list[str]:
     # within the 4-mini hard limit (8192).
     token_budget = max(cfg.get("max_tokens", 600), 1500)
 
-    resp = client.responses.create(
+    resp = client.responses.create(  # type: ignore[arg-type]
         model=cfg["id"],
         reasoning={"effort": "medium"},
         input=[{"role": "user", "content": user_prompt}],
         max_output_tokens=token_budget,
+        functions=[JURY_SCHEMA],  # type: ignore[arg-type]
+        function_call={"name": "jury_scoring"},
     )
+
     global LAST_RAW
     LAST_RAW = resp
-    return [resp.output_text.strip()]
+
+    # Extract the function-call arguments JSON from the first tool call
+    for item in resp.output:
+        if getattr(item, "type", "") == "tool":
+            try:
+                return [item.arguments.strip()]  # type: ignore[attr-defined]
+            except Exception:
+                pass
+
+    # Fallback: if the model still returned plain text
+    return [getattr(resp, "output_text", "").strip()]
 
 
 def generate(model_key: str, messages: list[dict], n: int):
     cfg = _load_config()["models"][model_key]
     if _is_reasoning_model(model_key, cfg):
         return _openai_reasoning_call(messages, n, cfg)
-    return _openai_call(messages, n, cfg) 
+    return _openai_call(messages, n, cfg)
+
+
+# -----------------------------------------------------------------------------
+# Shared JSON schema for mini models (function calling)
+# -----------------------------------------------------------------------------
+
+JURY_SCHEMA = {
+    "name": "jury_scoring",
+    "description": "Return six quantitative judgments about the case",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "objective_probability": {"type": "integer", "minimum": 0, "maximum": 100},
+            "good_reasons": {"type": "integer", "minimum": 0, "maximum": 100},
+            "recklessness": {"type": "integer", "minimum": 1, "maximum": 7},
+            "negligence": {"type": "integer", "minimum": 1, "maximum": 7},
+            "blameworthiness": {"type": "integer", "minimum": 1, "maximum": 7},
+            "punishment": {"type": "integer", "minimum": 1, "maximum": 7},
+        },
+        "required": [
+            "objective_probability",
+            "good_reasons",
+            "recklessness",
+            "negligence",
+            "blameworthiness",
+            "punishment",
+        ],
+        "additionalProperties": False,
+    },
+}
+
+def _choice_to_text(choice):
+    """Extract text or function-call arguments from a ChatCompletion choice."""
+    msg = choice.message
+    # New tool calling not supported on mini models; use legacy function_call
+    if getattr(msg, "function_call", None):
+        try:
+            return msg.function_call.arguments.strip()
+        except Exception:
+            pass
+    # Fallback to plain content
+    return msg.content.strip() if msg.content else "" 

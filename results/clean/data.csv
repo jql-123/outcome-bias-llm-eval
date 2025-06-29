@@ -320,3 +320,7 @@ cd7cf13b,deepseekr1,5,datacenter_cooling_expert_good,neutral,juror,3.0,80.0,2.0,
 cd7cf13b,deepseekr1,5,chemical_valve_leak_expert_bad,bad,juror,7.0,70.0,7.0,7.0,7.0,7.0ee0815c3,o4mini,1,datacenter_cooling_good,neutral,juror,1.0,15.0,7,2.0,7,7
 65bfb273,o4mini,1,datacenter_cooling_bad,bad,juror,1.0,15.0,7,2.0,7,7
 327c85e6,o4mini,1,flood_bad,bad,juror,1.0,20.0,2.0,7,3.0,3.0
+39dc9a5d,o1mini,1,drone_delivery_battery_good,neutral,juror,70.0,50.0,5.0,5.0,5.0,3.0
+d9f6d487,o4mini,1,warehouse_fire_bad,bad,juror,1.0,1.0,7,1,2.0,7
+6745b704,o4mini,1,ski_resort_avalanche_bad,bad,juror,1.0,25.0,7,2.0,7,7
+b44b1e90,o4mini,1,traffic_bad,bad,juror,10.0,80.0,2.0,6.0,5.0,4.0

@@ -27,11 +27,22 @@ FORMAT_2NUM = (
     "Do not add any extra keys, text, or commentary."
 )
 
-FORMAT_6NUM = (
-    "Respond with a single line of **valid JSON** that has exactly six key–value pairs:\n"
-    "{\n  \"objective_probability\": <0-100>,\n  \"good_reasons\": <0-100>,\n  \"recklessness\": <1-7>,\n  \"negligence\": <1-7>,\n  \"blameworthiness\": <1-7>,\n  \"punishment\": <1-7>\n}\n"
-    "Do not add any extra keys, text, or commentary."
-)
+# FORMAT_6NUM = (
+#     "Respond with a single line of **valid JSON** that has exactly six key–value pairs:\n"
+#     "{\n  \"objective_probability\": <0-100>,\n  \"good_reasons\": <0-100>,\n  \"recklessness\": <1-7>,\n  \"negligence\": <1-7>,\n  \"blameworthiness\": <1-7>,\n  \"punishment\": <1-7>\n}\n"
+#     "Do not add any extra keys, text, or commentary."
+# )
+FORMAT_6NUM =  """
+Respond **only** with a single JSON object that has exactly these six keys:
+{
+  "objective_probability": <0-100>,
+  "good_reasons": <0-100>,
+  "recklessness": <1-7>,
+  "negligence": <1-7>,
+  "blameworthiness": <1-7>,
+  "punishment": <1-7>
+}
+"""
 
 
 def _system_prompt(frame: str, n_nums: int) -> str:
