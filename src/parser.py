@@ -57,8 +57,12 @@ def _remove_fences(text: str) -> str:
         return "```".join(parts[1:]).strip()
     return text
 
+def _strip_leading_numbers(text: str) -> str:
+    """Remove leading enumeration numbers like '1. ' at line starts."""
+    return re.sub(r"(?m)^\s*\d+\.?\s*", "", text)
+
 def parse_six(text: str):
-    text = _remove_fences(text)
+    text = _strip_leading_numbers(_remove_fences(text))
     if text.startswith("{"):
         try:
             data = _json.loads(text)

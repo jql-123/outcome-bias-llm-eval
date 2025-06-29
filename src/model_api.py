@@ -75,7 +75,7 @@ def _openai_call(messages: List[dict], n: int, cfg) -> List[str]:
         create_kwargs["top_p"] = cfg.get("top_p", 0.95)
 
     # All mini models: use legacy function calling to return strict JSON
-    if "-mini" in cfg["id"]:
+    if cfg["id"] in ("o4-mini", "o3-mini"):
         create_kwargs["functions"] = [JURY_SCHEMA]
         create_kwargs["function_call"] = {"name": "jury_scoring"}
 
