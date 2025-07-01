@@ -18,9 +18,15 @@ results/conversations/*.json
 # API keys / local configs
 .env
 
-# Large / regenerated artefacts
+
+# large / derived artefacts
 results/raw_calls/
-results/figures/*          
-results/clean/*.csv        
+results/clean/
+results/tables/
+results/figures/
+Qualtrics Exports/
 *.png
 *.pdf
+
+# editors / venv
+*.ipynb_checkpoints
