@@ -30,3 +30,4 @@ Qualtrics Exports/
 
 # editors / venv
 *.ipynb_checkpoints
+src/.env

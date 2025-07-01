@@ -23,6 +23,17 @@ if not IN_CSV.exists():
 
 df = pd.read_csv(IN_CSV)
 
+# Consistent display names ----------------------------------------------------
+DISPLAY_NAMES = {
+    "gpt4o": "gpt-4o",
+    "o1mini": "gpt-o1-mini",
+    "o4mini": "gpt-o4-mini",
+    "sonnet4": "sonnet-4",
+    "deepseekr1": "deepseek-r1",
+}
+
+df["model_pretty"] = df["model"].map(DISPLAY_NAMES).fillna(df["model"])
+
 name_map = {
     "P_post": "Obj. probability",
     "GR_post": "Subj. probability",
@@ -36,15 +47,21 @@ df["DV_pretty"] = df["DV"].map(name_map)
 order_DV = list(name_map.values())
 
 # Ordering for hue (models)
-default_models = ["gpt4o", "sonnet4", "deepseekr1", "o1mini", "o4mini"]
-hue_order = [m for m in default_models if m in df["model"].unique()] + [
-    m for m in df["model"].unique() if m not in default_models
+default_models = [
+    "gpt-4o",
+    "sonnet-4",
+    "deepseek-r1",
+    "gpt-o1-mini",
+    "gpt-o4-mini",
+]
+hue_order = [m for m in default_models if m in df["model_pretty"].unique()] + [
+    m for m in df["model_pretty"].unique() if m not in default_models
 ]
 
 df["DV_pretty"] = pd.Categorical(df["DV_pretty"], categories=order_DV, ordered=True)
-df["model"] = pd.Categorical(df["model"], categories=hue_order, ordered=True)
+df["model_pretty"] = pd.Categorical(df["model_pretty"], categories=hue_order, ordered=True)
 
-df = df.sort_values(["model", "DV_pretty"]).reset_index(drop=True)
+df = df.sort_values(["model_pretty", "DV_pretty"]).reset_index(drop=True)
 
 sns.set(style="whitegrid", context="talk")
 
@@ -54,7 +71,7 @@ g = sns.catplot(
     kind="bar",
     x="DV_pretty",
     y="abs_diff",
-    hue="model",
+    hue="model_pretty",
     order=order_DV,
     hue_order=hue_order,
     ci=None,
@@ -72,11 +89,12 @@ assert len(bars) == len(df)
 sig_set: set[tuple[str, str]] = set()
 if SIG_CSV.exists():
     sig_df = pd.read_csv(SIG_CSV)
+    sig_df["model_pretty"] = sig_df["model"].map(DISPLAY_NAMES).fillna(sig_df["model"])
     p_col = "p" if "p" in sig_df.columns else (
         "p_value" if "p_value" in sig_df.columns else sig_df.columns[sig_df.columns.str.contains("p", case=False)][0]
     )
     sig_set = {
-        (row["model"], row["DV"]) for _, row in sig_df.iterrows() if row[p_col] < 0.05
+        (row["model_pretty"], row["DV"]) for _, row in sig_df.iterrows() if row[p_col] < 0.05
     }
 
 for idx, row in df.iterrows():
@@ -94,7 +112,7 @@ for idx, row in df.iterrows():
     )
 
     # Significance asterisk
-    if (row["model"], row["DV"]) in sig_set:
+    if (row["model_pretty"], row["DV"]) in sig_set:
         # place star just beyond the CI whisker
         star_y = row["CI_high"] + 0.2 if y >= 0 else row["CI_low"] - 0.2
         g.ax.text(
