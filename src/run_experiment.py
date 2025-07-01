@@ -137,6 +137,7 @@ def main():
     parser_cli.add_argument("--total", type=int, default=None, help="Total completions per model (across all conditions). Overrides --n if provided.")
     parser_cli.add_argument("--frame", type=str, default="juror", choices=["juror", "experiment"], help="System prompt framing for Step B (juror or experiment).")
     parser_cli.add_argument("--no-log", action="store_true", help="Disable saving conversation JSON logs.")
+    parser_cli.add_argument("--conds", nargs="+", help="Only run these specific condition keys (e.g. traffic_good flood_bad). Overrides the default set derived from the study.")
 
     args = parser_cli.parse_args()
 
@@ -148,7 +149,9 @@ def main():
     models = args.models
     frame = args.frame
 
-    if study == 5:
+    if args.conds:
+        conditions = args.conds
+    elif study == 5:
         # Single-step expert probability, one prompt per scenario
         conditions = [f"{scen}_expert_{suffix}" for scen in parts.keys() for suffix in ("good","bad")]
     elif study == 1 or study == 3:
@@ -226,7 +229,7 @@ def main():
                     ) = parser.parse_six(dv_resp)
                 except Exception as e:
                     # Already saved above; nothing more to do
-                    print(f"[WARN] Could not parse completion for {model}/{cond}: {e}")
+                    print(f"[WARN] {run_id} – Could not parse completion for {model}/{cond}: {e}")
                     return None
 
                 outcome = "neutral" if cond.endswith("good") else "bad"
@@ -296,7 +299,9 @@ def main():
                         blame,
                         punish,
                     ) = parser.parse_six(dv_resp)
-                except Exception:
+                except Exception as e:
+                    # Already saved above; nothing more to do
+                    print(f"[WARN] {run_id} – Could not parse completion for {model}/{cond}: {e}")
                     return None
 
                 log_conversation(model, cond, "post", msgs_b, dv_resp, run_id, f"exp{study}")
@@ -353,7 +358,7 @@ def main():
                     ) = parser.parse_six(dv_resp)
                 except Exception as e:
                     # Already saved above; nothing more to do
-                    print(f"[WARN] Could not parse completion for {model}/{cond}: {e}")
+                    print(f"[WARN] {run_id} – Could not parse completion for {model}/{cond}: {e}")
                     return None
 
                 outcome = "neutral" if cond.endswith("good") else "bad"
@@ -431,7 +436,7 @@ def main():
                 ) = parser.parse_six(dv_resp)
             except Exception as e:
                 # Already saved above; nothing more to do
-                print(f"[WARN] Could not parse completion for {model}/{cond}: {e}")
+                print(f"[WARN] {run_id} – Could not parse completion for {model}/{cond}: {e}")
                 return None
 
             # For post-outcome step

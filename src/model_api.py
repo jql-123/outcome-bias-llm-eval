@@ -197,6 +197,16 @@ def _openai_reasoning_call(messages: list[dict], n: int, cfg) -> list[str]:
 
 def generate(model_key: str, messages: list[dict], n: int):
     cfg = _load_config()["models"][model_key]
+
+    provider = cfg.get("provider", "openai").lower()
+
+    # Route call based on provider first.
+    if provider == "deepseek":
+        return _deepseek_call(messages, n, cfg)
+    if provider == "anthropic":
+        return _anthropic_call(messages, n, cfg)
+
+    # Default (OpenAI) provider ─ decide between chat and reasoning endpoints.
     if _is_reasoning_model(model_key, cfg):
         return _openai_reasoning_call(messages, n, cfg)
     return _openai_call(messages, n, cfg)

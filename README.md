@@ -106,3 +106,10 @@ python src/plot_delta_d.py
 The raw numbers are written to `results/tables/exp6_vs_baseline.csv` and the
 figure (if requested) is saved to
 `results/figures/delta_d_exp6.png`. This mirrors the human paper's Experiment-6 comparison. 
+
+## Analysis Workflow
+
+```bash
+python src/clean_percent_reduction.py   # add QC flags to percent_reduction.csv
+python src/plot_percent_reduction.py    # grouped bar chart with error bars & flags
+``` 

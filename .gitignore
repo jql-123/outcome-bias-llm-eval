@@ -1,4 +1,5 @@
 # Ignore Python cache and virtual environments
+
 __pycache__/
 *.pyc
 .env/
@@ -13,3 +14,13 @@ venv/
 
 # Ignore conversation logs
 results/conversations/*.json
+
+# API keys / local configs
+.env
+
+# Large / regenerated artefacts
+results/raw_calls/
+results/figures/*          
+results/clean/*.csv        
+*.png
+*.pdf

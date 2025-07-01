@@ -208,6 +208,7 @@ def plot_by_model_generic(
     good_suffix: str = "good",
     bad_suffix: str = "bad",
     title: str | None = None,
+    show_frame: bool = True,
 ) -> None:
     """Plot all scenarios for a study, grouping by outcome via suffix."""
     df = df_raw[(df_raw["study"] == study) & (df_raw["frame"] == frame)].copy()
@@ -290,7 +291,8 @@ def plot_by_model_generic(
 
     n_rows = len(df)
     title_main = title if title else f"Experiment {study}"
-    g.fig.suptitle(f"{title_main} – {frame.capitalize()} framing (N={n_rows})", y=1.06, fontsize=14)
+    suffix = f" – {frame.capitalize()} framing" if show_frame else ""
+    g.fig.suptitle(f"{title_main}{suffix} (N={n_rows})", y=1.06, fontsize=14)
 
     plt.tight_layout()
     FIG_DIR.mkdir(parents=True, exist_ok=True)
