@@ -112,4 +112,62 @@ figure (if requested) is saved to
 ```bash
 python src/clean_percent_reduction.py   # add QC flags to percent_reduction.csv
 python src/plot_percent_reduction.py    # grouped bar chart with error bars & flags
-``` 
+```
+
+## Quick reproduction: Study 1 vs Study 5
+
+The commands below assume you have installed the dependencies (see **Setup** section) and exported your API keys in a local `.env`.
+
+```bash
+# 1) Run or resume the two studies (juror framing)
+python src/check_and_fill.py --models gpt4o sonnet4 deepseekr1 o1mini o4mini --study 1 --frame juror
+python src/check_and_fill.py --models gpt4o sonnet4 deepseekr1 o1mini o4mini --study 5 --frame juror
+```
+Each script call tops-up missing completions so you can re-run it safely; the raw responses land in `results/raw_calls/` and the parsed rows in `results/clean/data.csv`.
+
+---
+### Analysis & figures
+
+```bash
+# 2) Extended outcome-bias analysis
+a) effect-size tables + percent-reduction
+python -m src.extend_outcome_bias          # outputs results/tables/*.csv
+
+b) absolute |d| difference metric + plot
+a) compute
+python -m src.compute_abs_diff             # -> results/tables/abs_diff.csv
+b) plot
+python src/plot_abs_diff.py                # -> results/figures/abs_diff_bar.png
+
+# 3) Multi-panel bar charts (baseline vs expert)
+python src/plot_all_dvs.py                 # → results/figures/all_dvs_exp1_juror.png
+                                           #   results/figures/all_dvs_exp5_expert_juror.png
+
+# 4) Single-panel baseline for GPT-4o
+python src/plot_single_baseline_gpt4o.py   # → results/figures/gpt-4o_exp1_baseline.png
+```
+
+---
+### Two-way ANOVA (Outcome × Expert)
+
+To replicate the interaction statistics used for significance flags:
+
+```bash
+python -m src.anova_expert_interaction     # writes results/tables/anova_interactions.csv
+```
+
+The table lists the β coefficient, *t*-value and *p*-value for the Outcome × Expert term for every model and dependent variable; any row with *p* < .05 is marked with an asterisk in `plot_abs_diff.py`. 
+
+## Models evaluated
+
+The experiments reported in this repository use five publicly-available chat models:
+
+| internal id | display name |
+|-------------|--------------|
+| `gpt4o`     | **gpt-4o** |
+| `sonnet4`   | **sonnet-4** |
+| `deepseekr1`| **deepseek-r1** |
+| `o1mini`    | **gpt-o1-mini** |
+| `o4mini`    | **gpt-o4-mini** |
+
+All models are accessed through their official APIs; no proprietary weights are included in this repository.
