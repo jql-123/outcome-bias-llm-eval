@@ -23,10 +23,10 @@ results/conversations/*.json
 results/raw_calls/
 results/clean/
 results/tables/
-results/figures/
+# results/figures/   # allow publishing final figures
 Qualtrics Exports/
-*.png
-*.pdf
+# *.png               # allow publishing PNG figures
+# *.pdf               # allow publishing the PDF report
 
 # editors / venv
 *.ipynb_checkpoints
