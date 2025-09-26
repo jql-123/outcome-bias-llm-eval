@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 
 # -----------------------------------------------------------------------------
-# Analysis & Plotting Convenience Script
+# Paper Reproduction Analysis Script
 # -----------------------------------------------------------------------------
-# This script runs the full post-processing pipeline after new experiment API
-# calls. It will:
-#   1) Plot baseline (Study-3) bar charts
-#   2) Plot expert-probability (Study-6) bar charts
-#   3) Compute baseline vs expert stats and create tables
-#   4) Draw forest, scatter, and Δd visualisations
-#   5) Run the two-way ANOVA interaction test
-#   6) Produce per-model dstats for Study-6
+# This script runs the essential analysis pipeline to reproduce results from
+# "Outcome Bias in Large Language Models and the Limits of Probability Anchoring"
+#
+# Key outputs:
+#   1) Table A1: Outcome effect sizes (baseline vs expert cue)
+#   2) Table A2: Outcome × Expert ANOVA results
+#   3) Figure: Absolute reduction in bias
+#   4) Figure: All dependent variables comparison
 #
 # All output figures are written to   results/figures/
 # All output tables  are written to   results/tables/
@@ -48,21 +48,9 @@ log() {
 }
 
 # -----------------------------------------------------------------------------
-# 1) Baseline bar chart (Study-${BASELINE_STUDY})
+# 1) Table A1: Outcome effect sizes at baseline and after expert cue
 # -----------------------------------------------------------------------------
-log "Plotting baseline bar chart (Study ${BASELINE_STUDY}, frame='${FRAME}')"
-python src/plot_all_dvs_by_model.py --frame "${FRAME}" --study "${BASELINE_STUDY}"
-
-# -----------------------------------------------------------------------------
-# 2) Expert-probability bar chart (Study-${EXPERT_STUDY})
-# -----------------------------------------------------------------------------
-log "Plotting expert bar chart (Study ${EXPERT_STUDY}, frame='${FRAME}')"
-python src/plot_expert.py --frame "${FRAME}" --study "${EXPERT_STUDY}"
-
-# -----------------------------------------------------------------------------
-# 3) Baseline vs Expert statistics table (exp6_vs_baseline.csv)
-# -----------------------------------------------------------------------------
-log "Computing baseline vs expert stats table"
+log "Generating Table A1: Outcome effect sizes (baseline vs expert)"
 if [[ -n "${SCENARIO}" ]]; then
   python src/stats_expert_vs_baseline.py --baseline "${BASELINE_STUDY}" --expert "${EXPERT_STUDY}" --scenario "${SCENARIO}"
 else
@@ -70,29 +58,27 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# 4) Forest, scatter, and Δd plots using the stats table
+# 2) Table A2: Outcome × Expert ANOVA results (per variable, pooled across models)
 # -----------------------------------------------------------------------------
-log "Drawing forest, scatter, and Δd plots"
-python src/plot_forest_d.py --baseline "${BASELINE_STUDY}" --expert "${EXPERT_STUDY}"
-python src/plot_scatter_d.py --baseline "${BASELINE_STUDY}" --expert "${EXPERT_STUDY}"
-python src/plot_delta_d.py --baseline "${BASELINE_STUDY}" --expert "${EXPERT_STUDY}"
-
-# Per–model scatter
-python src/plot_scatter_d_by_model.py
-
-# Per–model forest
-python src/plot_forest_d_by_model.py --baseline "${BASELINE_STUDY}" --expert "${EXPERT_STUDY}"
-
-# -----------------------------------------------------------------------------
-# 5) Outcome × Expert two-way ANOVA interaction (anova_interactions.csv)
-# -----------------------------------------------------------------------------
-log "Running two-way ANOVA interaction analysis"
+log "Generating Table A2: Outcome × Expert ANOVA results"
 python src/anova_expert_interaction.py --baseline "${BASELINE_STUDY}" --expert "${EXPERT_STUDY}"
 
 # -----------------------------------------------------------------------------
-# 6) Study-6 per-model dstats (exp6_stats.csv)
+# 3) Core analysis tables and effect sizes
 # -----------------------------------------------------------------------------
-log "Computing dstats for Study-${EXPERT_STUDY} (expert-probability)"
-python src/stats_expert.py
+log "Computing extended outcome bias analysis"
+python -m src.extend_outcome_bias --baseline "${BASELINE_STUDY}" --expert "${EXPERT_STUDY}"
 
-log "\nAll analyses complete!  Figures → results/figures,  Tables → results/tables" 
+log "Computing absolute effect size differences"
+python -m src.compute_abs_diff
+
+# -----------------------------------------------------------------------------
+# 4) Paper figures
+# -----------------------------------------------------------------------------
+log "Generating paper figures"
+python src/plot_abs_diff.py
+python src/plot_all_dvs.py
+
+log "\nPaper reproduction complete!"
+log "Tables: results/tables/ (exp6_vs_baseline.csv, anova_interactions.csv)"
+log "Figures: results/figures/ (abs_diff_bar.png, all_dvs_*.png)" 
