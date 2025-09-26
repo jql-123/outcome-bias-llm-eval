@@ -122,8 +122,7 @@ bias_llmeval/
 │   ├── plot_abs_diff.py          # Figure 1 generation
 │   └── plot_all_dvs.py           # Figures 2 & 3 generation
 ├── data/
-│   ├── vignette_parts.json       # Scenario components and variables
-│   └── vignettes.json            # Complete scenario texts
+│   └── vignette_parts.json       # Scenario components and variables
 ├── results/
 │   ├── clean/data.csv            # Processed experimental data
 │   ├── figures/                  # Paper figures
