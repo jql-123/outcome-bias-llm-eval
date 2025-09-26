@@ -1,5 +1,7 @@
 # Outcome Bias in Large Language Models
 
+Conduct outcome bias studies study 1 and study 5 in Kneer and Skoczeń (2023) human participants outcome bias, study 1 (Baseline) – scenario followed by a neutral or harmful outcome, Study 5 (Expert) conducted for LLMs.
+
 **Paper**: *Outcome Bias in Large Language Models and the Limits of Probability Anchoring* (Lee 2025)
 **Conference**: RECAP 2025
 
@@ -149,5 +151,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Acknowledgments
 
-- Negligence scenarios adapted from Kneer & Skoczeń (2023)
+- Kneer, Markus and Skoczeń, Izabela, Outcome Effects, Moral Luck and the Hindsight Bias (March 22, 2021). Kneer, M., & Skoczeń, I. (2023). Outcome effects, moral luck and the hindsight bias. Cognition, 232, 105258. https://doi.org/10.1016/j.cognition.2022.105258
 - Built with APIs from OpenAI, Anthropic, and DeepSeek
