@@ -137,7 +137,7 @@ bias_llmeval/
 ```bibtex
 @inproceedings{lee2025outcome,
   title={Outcome Bias in Large Language Models and the Limits of Probability Anchoring},
-  author={Lee, Jia Qie},
+  author={Lee, JiaQie},
   booktitle={Proceedings of RECAP 2025},
   year={2025}
 }
