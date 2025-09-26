@@ -1,40 +1,146 @@
-# Outcome Bias in Large Language Models (RECAP 2025)
+# Outcome Bias in Large Language Models
 
-This repository hosts the **data and headline figures** for the negligence-scenario experiments described in the RECAP report *Outcome Bias in Large Language Models and the Limits of Probability Anchoring* (Lee 2025).  The helper scripts used during data collection are **not** maintained for public reuse; therefore no installation or quick-start instructions are provided here.
+**Paper**: *Outcome Bias in Large Language Models and the Limits of Probability Anchoring* (Lee 2025)
+**Conference**: RECAP 2025
 
-We present ten negligence scenarios (adapted from Kneer & Skoczeń, 2023) to five frontier chat models under two conditions:
+This repository contains the complete code and data for reproducing the experiments and results reported in our paper.
 
-1. **Baseline** – scenario followed by a neutral *or* harmful outcome.
-2. **Expert** – an “expert witness” states the prior probability of harm (2–7 %) before the outcome.
+## Abstract
 
-### Models evaluated
+We investigate outcome bias in large language models (LLMs) using negligence scenarios adapted from legal psychology. Through experiments with five frontier models (GPT-4o, Claude Sonnet-4, DeepSeek-R1, GPT-o1-mini, GPT-o4-mini), we demonstrate that LLMs exhibit systematic outcome bias: they judge identical negligent actions more harshly when they result in harmful outcomes versus neutral ones. We further test whether providing expert probability information can reduce this bias, finding mixed effectiveness across models and measures.
 
-| internal id | Model name |
-|-------------|------------|
-| `gpt4o`     | GPT-4o |
-| `sonnet4`   | Claude Sonnet-4 |
-| `deepseekr1`| DeepSeek-R1 |
-| `o1mini`    | GPT-o1-mini |
-| `o4mini`    | GPT-o4-mini |
+## Quick Start
 
-Each model contributes **60 responses per study** (10 scenarios × 2 outcomes × 3 completions).
-Across the five studies reported in the paper this amounts to **300 responses per model** and
-**1 500 model completions in total**.  All further bootstrap resampling is performed offline.
+### Installation
+
+```bash
+git clone https://github.com/[username]/bias_llmeval.git
+cd bias_llmeval
+pip install -r requirements.txt
+```
+
+### API Keys Setup
+
+Create a `.env` file in the project root with your API keys:
+
+```bash
+OPENAI_API_KEY=your_openai_key_here
+ANTHROPIC_API_KEY=your_anthropic_key_here
+DEEPSEEK_API_KEY=your_deepseek_key_here
+```
+
+### Reproduce Paper Results
+
+```bash
+# Run experiments for both studies (requires API keys)
+python src/check_and_fill.py --models gpt4o sonnet4 deepseekr1 o1mini o4mini --study 1 --frame juror
+python src/check_and_fill.py --models gpt4o sonnet4 deepseekr1 o1mini o4mini --study 5 --frame juror
+
+# Generate all analyses and figures from the paper
+./run_analysis.sh
+```
+
+**Note**: Running the full experiments requires API access and may incur costs (~$50-100 total). Pre-computed results are included in `results/` for immediate analysis.
+
+## Experimental Design
+
+We present ten negligence scenarios (adapted from Kneer & Skoczeń, 2023) to five frontier models under two conditions:
+
+1. **Study 1 (Baseline)** – scenario followed by a neutral or harmful outcome
+2. **Study 5 (Expert)** – an "expert witness" states the prior probability of harm (2–7%) before the outcome
+
+### Models Evaluated
+
+| Internal ID | Model Name | Developer |
+|-------------|------------|-----------|
+| `gpt4o`     | GPT-4o | OpenAI |
+| `sonnet4`   | Claude Sonnet-4 | Anthropic |
+| `deepseekr1`| DeepSeek-R1 | DeepSeek |
+| `o1mini`    | GPT-o1-mini | OpenAI |
+| `o4mini`    | GPT-o4-mini | OpenAI |
+
+### Data Collection
+
+- **60 responses per study per model** (10 scenarios × 2 outcomes × 3 completions)
+- **300 responses per model total** across both studies
+- **1,500 model completions total**
+- All statistical analyses performed offline with bootstrap resampling
 
 ## Key Results
 
-Below are the headline plots from the replication. They summarise the effect sizes across models and conditions at a glance.
+### Main Findings
 
-- **Absolute reduction in bias (|d|)**
-  
+1. **Systematic Outcome Bias**: All models show significant outcome bias, judging identical negligent actions more harshly when they result in harmful vs. neutral outcomes.
+
+2. **Limited Expert Intervention**: Providing expert probability information reduces bias for some measures but shows inconsistent effectiveness across models.
+
+3. **Model Differences**: Reasoning models (o1-mini, o4-mini) show different bias patterns compared to standard models.
+
+### Paper Figures
+
+- **Figure 1: Absolute reduction in bias (|d|)**
+
   ![Absolute reduction in bias](results/figures/abs_diff_bar.png)
 
-- **Baseline vs expert – all dependent variables (Study 1, juror framing)**
-  
-  ![Baseline vs expert – Study 1](results/figures/all_dvs_exp1_juror.png)
+- **Figure 2: Study 1 (Baseline) – all dependent variables**
 
-- **Expert-probability condition – all dependent variables (Study 5, juror framing)**
-  
-  ![Expert probability – Study 5](results/figures/all_dvs_exp5_expert_juror.png)
+  ![Baseline condition](results/figures/all_dvs_exp1_juror.png)
 
-For a full statistical breakdown see the `results/tables/` directory or run the analysis pipeline.
+- **Figure 3: Study 5 (Expert) – all dependent variables**
+
+  ![Expert probability condition](results/figures/all_dvs_exp5_expert_juror.png)
+
+### Statistical Results
+
+Key tables are generated in `results/tables/`:
+- `exp6_vs_baseline.csv` - **Table A1**: Outcome effect sizes at baseline and after expert cue
+- `anova_interactions.csv` - **Table A2**: Outcome × Expert ANOVA results (per variable, pooled across models)
+- `abs_diff.csv` - Absolute effect size differences for bias reduction analysis
+
+## Repository Structure
+
+```
+bias_llmeval/
+├── src/                          # Source code
+│   ├── run_experiment.py         # Main experiment runner
+│   ├── check_and_fill.py         # Ensure complete data collection
+│   ├── model_api.py              # API wrappers for all models
+│   ├── prompts.py                # Prompt templates and generation
+│   ├── parser.py                 # Response parsing and validation
+│   ├── stats_expert_vs_baseline.py  # Table A1 generation
+│   ├── anova_expert_interaction.py  # Table A2 generation
+│   ├── extend_outcome_bias.py    # Core effect size analysis
+│   ├── compute_abs_diff.py       # Bias reduction calculations
+│   ├── plot_abs_diff.py          # Figure 1 generation
+│   └── plot_all_dvs.py           # Figures 2 & 3 generation
+├── data/
+│   ├── vignette_parts.json       # Scenario components and variables
+│   └── vignettes.json            # Complete scenario texts
+├── results/
+│   ├── clean/data.csv            # Processed experimental data
+│   ├── figures/                  # Paper figures
+│   └── tables/                   # Statistical tables
+├── config.yaml                   # Model configurations
+├── requirements.txt              # Python dependencies
+└── run_analysis.sh              # Complete analysis pipeline
+```
+
+## Citation
+
+```bibtex
+@inproceedings{lee2025outcome,
+  title={Outcome Bias in Large Language Models and the Limits of Probability Anchoring},
+  author={Lee, [First Name]},
+  booktitle={Proceedings of RECAP 2025},
+  year={2025}
+}
+```
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- Negligence scenarios adapted from Kneer & Skoczeń (2023)
+- Built with APIs from OpenAI, Anthropic, and DeepSeek
