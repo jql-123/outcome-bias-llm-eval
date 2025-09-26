@@ -2,8 +2,7 @@
 
 This study replicates Studies 1 and 5 from Kneer and Skoczeń (2023) outcome bias research with large language models instead of human participants.
 
-**Paper**: *Outcome Bias in Large Language Models and the Limits of Probability Anchoring* (Lee 2025)
-**Conference**: RECAP 2025
+**Paper**: *Outcome Bias in Large Language Models and the Limits of Probability Anchoring* 
 
 This repository contains the complete code and data for reproducing the experiments and results reported in our paper.
 
@@ -11,7 +10,7 @@ This repository contains the complete code and data for reproducing the experime
 
 ## Abstract
 
-We investigate outcome bias in large language models (LLMs) using negligence scenarios adapted from legal psychology. Through experiments with five frontier models (GPT-4o, Claude Sonnet-4, DeepSeek-R1, GPT-o1-mini, GPT-o4-mini), we demonstrate that LLMs exhibit systematic outcome bias: they judge identical negligent actions more harshly when they result in harmful outcomes versus neutral ones. We further test whether providing expert probability information can reduce this bias, finding mixed effectiveness across models and measures.
+We tested five frontier models (GPT-4o, Claude Sonnet-4, DeepSeek-R1, GPT-o1-mini, GPT-o4-mini) for outcome bias—judging identical actions more harshly when they result in harmful versus neutral outcomes. Using ten negligence scenarios (two adapted from the original studies, eight newly created), we found systematic bias across all models. Expert probability information showed mixed effectiveness in reducing this bias.
 
 ## Quick Start
 
