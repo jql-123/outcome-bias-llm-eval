@@ -48,7 +48,7 @@ python src/check_and_fill.py --models gpt4o sonnet4 deepseekr1 o1mini o4mini --s
 
 ### Scenarios
 
-Ten negligence vignettes were used in the study (see [`data/vignette_parts.json`](data/vignette_parts.json)). In each case, the agent's decision and the objective probability of harm were held constant across neutral and harmful outcomes, so that only the eventual outcome differed by chance. Two of the vignettes ("flood" and "traffic") were adapted directly from Kneer and Skoczeń (2023), who studied outcome bias in human participants. The remaining eight scenarios were newly constructed to extend coverage across agriculture, transport, biotechnology, warehouse robotics, and finance, ensuring both realism and diversity of context.
+Ten negligence vignettes were used (see [`data/vignette_parts.json`](data/vignette_parts.json)), with agent decisions and harm probabilities held constant so only outcomes differed by chance. Two scenarios ("flood" and "traffic") were adapted from Kneer and Skoczeń (2023), while eight new scenarios were constructed across diverse domains.
 
 ### Studies
 
