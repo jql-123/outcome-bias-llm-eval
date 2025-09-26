@@ -46,7 +46,13 @@ python src/check_and_fill.py --models gpt4o sonnet4 deepseekr1 o1mini o4mini --s
 
 ## Experimental Design
 
-We present ten negligence scenarios (adapted from Kneer & Skoczeń, 2023) to five frontier models under two conditions:
+### Scenarios
+
+Ten negligence vignettes were used in the study. In each case, the agent's decision and the objective probability of harm were held constant across neutral and harmful outcomes, so that only the eventual outcome differed by chance. Two of the vignettes ("flood" and "traffic") were adapted directly from Kneer and Skoczeń (2023), who studied outcome bias in human participants. The remaining eight scenarios were newly constructed to extend coverage across agriculture, transport, biotechnology, warehouse robotics, and finance, ensuring both realism and diversity of context.
+
+### Studies
+
+We present these ten scenarios to five frontier models under two conditions:
 
 1. **Study 1 (Baseline)** – scenario followed by a neutral or harmful outcome
 2. **Study 5 (Expert)** – an "expert witness" states the prior probability of harm (2–7%) before the outcome
