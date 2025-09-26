@@ -5,6 +5,8 @@
 
 This repository contains the complete code and data for reproducing the experiments and results reported in our paper.
 
+*This work was conducted during the pilot run of RECAP, a version of the ARENA program run in Singapore.*
+
 ## Abstract
 
 We investigate outcome bias in large language models (LLMs) using negligence scenarios adapted from legal psychology. Through experiments with five frontier models (GPT-4o, Claude Sonnet-4, DeepSeek-R1, GPT-o1-mini, GPT-o4-mini), we demonstrate that LLMs exhibit systematic outcome bias: they judge identical negligent actions more harshly when they result in harmful outcomes versus neutral ones. We further test whether providing expert probability information can reduce this bias, finding mixed effectiveness across models and measures.
