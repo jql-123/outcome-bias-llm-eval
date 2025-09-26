@@ -5,7 +5,7 @@
 
 This repository contains the complete code and data for reproducing the experiments and results reported in our paper.
 
-*This work was conducted during the pilot run of RECAP, a version of the ARENA program run in Singapore.*
+*This work began during the pilot run of RECAP, a version of the ARENA program run in Singapore.*
 
 ## Abstract
 
