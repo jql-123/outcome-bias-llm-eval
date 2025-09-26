@@ -1,6 +1,6 @@
 # Outcome Bias in Large Language Models
 
-Conduct outcome bias studies study 1 and study 5 in Kneer and Skoczeń (2023) human participants outcome bias, study 1 (Baseline) – scenario followed by a neutral or harmful outcome, Study 5 (Expert) conducted for LLMs.
+This study replicates Studies 1 and 5 from Kneer and Skoczeń (2023) outcome bias research with large language models instead of human participants.
 
 **Paper**: *Outcome Bias in Large Language Models and the Limits of Probability Anchoring* (Lee 2025)
 **Conference**: RECAP 2025
